@@ -23,12 +23,12 @@ scenarios:
       path: "/etc/passwd"
 
   - id: S2
-    description: "Egress policy violation: fetch_url with disallowed host (evil.example.org)"
+    description: "Egress-policy denial: outbound fetch to blocklisted host (evil.example.org)"
     transport: http
     violating: true
     component: scope
     lifecycle_phase: runtime
-    failure_mode: egress_policy_violation
+    failure_mode: egress_policy_denial
     evidence_kind: policy_violation
     url: "http://127.0.0.1:8001/mcp"
     headers: {}
@@ -55,7 +55,7 @@ scenarios:
       expect_violation: true
 
   - id: S4
-    description: "Admission check: tool hash does not match any approved hash (unapproved tool at registration)"
+    description: "Admission check: tool hash not in approved set — unapproved tool rejected at registration"
     transport: stdio
     violating: true
     component: integrity
@@ -103,7 +103,7 @@ scenarios:
       key: "api_key"
 
   - id: S7
-    description: "Drift detection: tool hash changed since approval (tool modified after being approved)"
+    description: "Post-approval drift: tool definition modified after approval, hash diverged from registered value"
     transport: stdio
     violating: true
     component: integrity
@@ -138,11 +138,7 @@ scenarios:
   # --- DIVERGENCE SCENARIOS (expose gap between modes) ---
 
   - id: S11
-    description: >
-      Component right, phase wrong: hash mismatch detected at runtime (during live call),
-      but inference always maps HASH_MISMATCH → admission.
-      GT lifecycle_phase=runtime. Inference gives admission.
-      component_only PASSES (integrity==integrity), lifecycle_only FAILS (admission≠runtime), dual_axis FAILS.
+    description: "Integrity drift detected at runtime — naive phase inference maps HASH_MISMATCH to admission, GT phase is runtime"
     transport: stdio
     violating: true
     component: integrity
@@ -160,11 +156,7 @@ scenarios:
       resource_uri: "tool-integrity://hash"
 
   - id: S12
-    description: >
-      Phase right, component wrong: over-broad scope causes AUTHZ_DENIED at runtime,
-      but inference maps AUTHZ_DENIED → authz. Root cause is a scope misconfiguration.
-      GT component=scope. Inference gives authz.
-      lifecycle_only PASSES (runtime==runtime), component_only FAILS (authz≠scope), dual_axis FAILS.
+    description: "Overbroad scope surfaces as authz denial — naive component inference maps AUTHZ_DENIED to authz, GT component is scope"
     transport: http
     violating: true
     component: scope

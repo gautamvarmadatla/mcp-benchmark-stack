@@ -218,3 +218,136 @@ async def test_full_benchmark():
            "dual_axis should localize more than lifecycle_only (S11: hash_mismatch at runtime, naive infers admission)"
     assert dual["localized"] > component["localized"], \
            "dual_axis should localize more than component_only (S12: authz_denied from scope misconfiguration, naive infers authz)"
+
+
+# --- Inference unit tests ---
+
+def test_infer_component_hash_mismatch():
+    from client.benchmark_client import _infer_component
+    assert _infer_component("HASH_MISMATCH: expected=X actual=Y") == "integrity"
+
+def test_infer_component_metadata_violation():
+    from client.benchmark_client import _infer_component
+    assert _infer_component("METADATA_VIOLATION: disallowed pattern") == "metadata"
+
+def test_infer_component_authz_denied():
+    from client.benchmark_client import _infer_component
+    assert _infer_component("AUTHZ_DENIED: scope required") == "authz"
+
+def test_infer_component_policy_violation_egress():
+    from client.benchmark_client import _infer_component
+    assert _infer_component("POLICY_VIOLATION: host 'evil.com' not in egress allowlist") == "scope"
+
+def test_infer_component_observability_gap():
+    from client.benchmark_client import _infer_component
+    assert _infer_component("OBSERVABILITY_GAP: no server trace") == "observability"
+
+def test_infer_phase_hash_mismatch():
+    from client.benchmark_client import _infer_phase
+    assert _infer_phase("HASH_MISMATCH: expected=X actual=Y", "integrity_check") == "admission"
+
+def test_infer_phase_metadata_violation():
+    from client.benchmark_client import _infer_phase
+    assert _infer_phase("METADATA_VIOLATION: bad pattern", "metadata_check") == "discovery"
+
+def test_infer_phase_observability_gap():
+    from client.benchmark_client import _infer_phase
+    assert _infer_phase("OBSERVABILITY_GAP: no trace", "") == "observability"
+
+def test_infer_phase_authz_denied():
+    from client.benchmark_client import _infer_phase
+    assert _infer_phase("AUTHZ_DENIED: scope mismatch", "get_secret") == "runtime"
+
+def test_infer_component_dual_overbroad_scope():
+    from client.benchmark_client import _infer_component_dual
+    assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", "overbroad_scope_manifests_as_authz_denial") == "scope"
+
+def test_infer_component_dual_fallback():
+    from client.benchmark_client import _infer_component_dual
+    assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", "unauthorized_principal") == "authz"
+
+def test_infer_phase_dual_at_runtime():
+    from client.benchmark_client import _infer_phase_dual
+    assert _infer_phase_dual("HASH_MISMATCH: expected=X actual=Y", "integrity_check", "integrity_drift_detected_at_runtime") == "runtime"
+
+def test_infer_phase_dual_fallback():
+    from client.benchmark_client import _infer_phase_dual
+    assert _infer_phase_dual("HASH_MISMATCH: expected=X actual=Y", "integrity_check", "unapproved_tool_at_admission") == "admission"
+
+# --- Golden tests: S11 and S12 create exactly the right divergence ---
+
+def test_s11_golden_divergence():
+    results = [
+        BenchmarkResult("S11", True, True, "integrity", "runtime", "hash_mismatch", False,
+                       predicted_component="integrity", predicted_phase="runtime", localization_correct=True,
+                       baseline_component="integrity", baseline_phase="admission",
+                       evidence_found=True, produced_evidence_path="fake/path"),
+    ]
+    dual = score_results_by_mode(results, "dual_axis")
+    lifecycle = score_results_by_mode(results, "lifecycle_only")
+    component = score_results_by_mode(results, "component_only")
+    assert dual["localization_accuracy"] == 1.0
+    assert lifecycle["localization_accuracy"] == 0.0
+    assert component["localization_accuracy"] == 1.0
+
+def test_s12_golden_divergence():
+    results = [
+        BenchmarkResult("S12", True, True, "scope", "runtime", "authz_denied", False,
+                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
+                       baseline_component="authz", baseline_phase="runtime",
+                       evidence_found=True, produced_evidence_path="fake/path"),
+    ]
+    dual = score_results_by_mode(results, "dual_axis")
+    lifecycle = score_results_by_mode(results, "lifecycle_only")
+    component = score_results_by_mode(results, "component_only")
+    assert dual["localization_accuracy"] == 1.0
+    assert lifecycle["localization_accuracy"] == 1.0
+    assert component["localization_accuracy"] == 0.0
+
+# --- Regression: baselines use baseline_* fields, not expected_evidence_kind ---
+
+def test_baselines_do_not_use_metadata():
+    results = [
+        BenchmarkResult("SX", True, True, "scope", "runtime", "policy_violation", False,
+                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
+                       baseline_component="authz", baseline_phase="admission",
+                       evidence_found=True, produced_evidence_path="fake/path"),
+    ]
+    lifecycle = score_results_by_mode(results, "lifecycle_only")
+    component = score_results_by_mode(results, "component_only")
+    assert lifecycle["localization_accuracy"] == 0.0
+    assert component["localization_accuracy"] == 0.0
+
+# --- Artifact validation test ---
+
+def test_artifact_validation_missing_path():
+    from client.benchmark_client import _validate_artifact
+    assert not _validate_artifact("")
+    assert not _validate_artifact("nonexistent/path/file.json")
+
+def test_artifact_validation_real_file(tmp_path):
+    from client.benchmark_client import _validate_artifact
+    import json
+    f = tmp_path / "trace.json"
+    f.write_text(json.dumps({"scenario_id": "S1", "kind": "policy_violation", "timestamp": "2026-01-01"}))
+    assert _validate_artifact(str(f))
+
+def test_artifact_validation_missing_fields(tmp_path):
+    from client.benchmark_client import _validate_artifact
+    import json
+    f = tmp_path / "trace.json"
+    f.write_text(json.dumps({"scenario_id": "S1"}))
+    assert not _validate_artifact(str(f))
+
+# --- Determinism test ---
+
+def test_scoring_determinism():
+    results = [
+        BenchmarkResult("S1", True, True, "scope", "runtime", "policy_violation", False,
+                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
+                       baseline_component="scope", baseline_phase="runtime",
+                       evidence_found=True, produced_evidence_path="fake/path"),
+    ]
+    m1 = score_results_by_mode(results, "dual_axis")
+    m2 = score_results_by_mode(results, "dual_axis")
+    assert m1 == m2

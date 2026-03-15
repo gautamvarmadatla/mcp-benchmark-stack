@@ -128,6 +128,19 @@ def _flatten_error(e: BaseException) -> str:
     return msg
 
 
+def _validate_artifact(path: str) -> bool:
+    if not path:
+        return False
+    p = Path(path)
+    if not p.exists() or p.stat().st_size < 10:
+        return False
+    try:
+        data = json.loads(p.read_text())
+        return all(k in data for k in ("scenario_id", "kind", "timestamp"))
+    except Exception:
+        return False
+
+
 def _score_response(response_text: str, error: str, expected_violation: bool) -> tuple[bool, bool]:
     combined = response_text + " " + error
     hit = any(kw in combined for kw in VIOLATION_KEYWORDS)
@@ -420,7 +433,7 @@ def score_results_by_mode(results: list[BenchmarkResult], mode: str) -> dict:
     else:
         localized = [r for r in detected if r.localization_correct]
 
-    evidence_complete = [r for r in detected if r.evidence_found and r.produced_evidence_path != ""]
+    evidence_complete = [r for r in detected if _validate_artifact(r.produced_evidence_path)]
 
     vdr = len(detected) / len(violating) if violating else 0.0
     fpr = len(fps) / len(benign) if benign else 0.0
@@ -497,5 +510,52 @@ def export_results(results: list[BenchmarkResult], metrics_dual: dict, metrics_l
                 "evidence_kind": r.expected_evidence_kind,
             })
 
-    log.info(f"Exported: {csv_path}, {comparison_path}, {summary_path}")
-    return csv_path, comparison_path, summary_path
+    def _pct(val):
+        return f"{round(val * 100)}%"
+
+    def _frac(m, key_loc, key_det):
+        return f"{m.get(key_loc, 0)}/{m.get(key_det, 0)}"
+
+    md_table_path = RESULTS_DIR / f"summary_table_{ts}.md"
+    dual_m = all_modes.get("dual_axis", {})
+    lc_m = all_modes.get("lifecycle_only", {})
+    co_m = all_modes.get("component_only", {})
+    md_lines = [
+        "# Benchmark Results",
+        "",
+        "| Metric | dual_axis | lifecycle_only | component_only |",
+        "|---|:-:|:-:|:-:|",
+        f"| Violation Detection Rate | {_pct(dual_m.get('violation_detection_rate', 0))} | {_pct(lc_m.get('violation_detection_rate', 0))} | {_pct(co_m.get('violation_detection_rate', 0))} |",
+        f"| False Positive Rate | {_pct(dual_m.get('false_positive_rate', 0))} | {_pct(lc_m.get('false_positive_rate', 0))} | {_pct(co_m.get('false_positive_rate', 0))} |",
+        f"| Localization Accuracy | {_pct(dual_m.get('localization_accuracy', 0))} | {_pct(lc_m.get('localization_accuracy', 0))} | {_pct(co_m.get('localization_accuracy', 0))} |",
+        f"| Evidence Completeness | {_pct(dual_m.get('evidence_completeness', 0))} | {_pct(lc_m.get('evidence_completeness', 0))} | {_pct(co_m.get('evidence_completeness', 0))} |",
+        f"| Localized / Detected | {_frac(dual_m, 'localized', 'detected')} | {_frac(lc_m, 'localized', 'detected')} | {_frac(co_m, 'localized', 'detected')} |",
+        "",
+        "> dual_axis uses taxonomy-assisted root-cause localization with failure_mode annotations.",
+        "> lifecycle_only and component_only use naive signal-based inference from response text only.",
+    ]
+    md_table_path.write_text("\n".join(md_lines))
+
+    tex_table_path = RESULTS_DIR / f"summary_table_{ts}.tex"
+    tex_lines = [
+        r"\begin{table}[h]",
+        r"\centering",
+        r"\begin{tabular}{lrrr}",
+        r"\hline",
+        r"Metric & dual\_axis & lifecycle\_only & component\_only \\",
+        r"\hline",
+        f"Violation Detection Rate & {_pct(dual_m.get('violation_detection_rate', 0))} & {_pct(lc_m.get('violation_detection_rate', 0))} & {_pct(co_m.get('violation_detection_rate', 0))} \\\\",
+        f"False Positive Rate & {_pct(dual_m.get('false_positive_rate', 0))} & {_pct(lc_m.get('false_positive_rate', 0))} & {_pct(co_m.get('false_positive_rate', 0))} \\\\",
+        f"Localization Accuracy & {_pct(dual_m.get('localization_accuracy', 0))} & {_pct(lc_m.get('localization_accuracy', 0))} & {_pct(co_m.get('localization_accuracy', 0))} \\\\",
+        f"Evidence Completeness & {_pct(dual_m.get('evidence_completeness', 0))} & {_pct(lc_m.get('evidence_completeness', 0))} & {_pct(co_m.get('evidence_completeness', 0))} \\\\",
+        f"Localized / Detected & {_frac(dual_m, 'localized', 'detected')} & {_frac(lc_m, 'localized', 'detected')} & {_frac(co_m, 'localized', 'detected')} \\\\",
+        r"\hline",
+        r"\end{tabular}",
+        r"\caption{MCP Benchmark Results. dual\_axis uses taxonomy-assisted root-cause localization; baselines use naive signal inference.}",
+        r"\label{tab:benchmark}",
+        r"\end{table}",
+    ]
+    tex_table_path.write_text("\n".join(tex_lines))
+
+    log.info(f"Exported: {csv_path}, {comparison_path}, {summary_path}, {md_table_path}, {tex_table_path}")
+    return csv_path, comparison_path, summary_path, md_table_path, tex_table_path
