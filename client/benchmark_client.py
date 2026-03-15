@@ -128,6 +128,14 @@ def _flatten_error(e: BaseException) -> str:
     return msg
 
 
+def _find_server_trace(trace_dir: str, kind: str) -> str:
+    td = Path(trace_dir)
+    if not td.exists():
+        return ""
+    matches = sorted(td.glob(f"*{kind}*.json"))
+    return str(matches[-1]) if matches else ""
+
+
 def _validate_artifact(path: str) -> bool:
     if not path:
         return False
@@ -344,22 +352,35 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
                 response_text = "\n".join(c.text for c in result.content if hasattr(c, "text"))
                 log.info(f"[{sid}] response: {response_text[:200]}")
 
-                if observability_check:
-                    obs_msg = f"OBSERVABILITY_GAP: no server-side denial trace found for {sid}"
-                    log.info(f"[{sid}] {obs_msg}")
-                    response_text = obs_msg
-
                 detected, fp = _score_response(response_text, "", expected_violation)
                 baseline_component = _infer_component(response_text)
                 baseline_phase = _infer_phase(response_text, tool_name)
-                predicted_component = _infer_component_dual(response_text, failure_mode)
-                predicted_phase = _infer_phase_dual(response_text, tool_name, failure_mode)
+
+                observability_gap = False
+                if detected and observability_check:
+                    server_trace_dir = scenario.get("server_trace_dir", "evidence/server_traces")
+                    server_trace = _find_server_trace(server_trace_dir, "policy_violation")
+                    observability_gap = (server_trace == "")
+                    if observability_gap:
+                        log.info(f"[{sid}] OBSERVABILITY_GAP: real denial detected, expected server trace missing in {server_trace_dir}")
+                    else:
+                        log.info(f"[{sid}] server trace found: {server_trace}")
+
+                if observability_gap:
+                    predicted_component = "observability"
+                    predicted_phase = "observability"
+                else:
+                    predicted_component = _infer_component_dual(response_text, failure_mode)
+                    predicted_phase = _infer_phase_dual(response_text, tool_name, failure_mode)
                 localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
                 produced_evidence_path = ""
                 evidence_found = False
                 if detected:
-                    kind = "observability_gap" if observability_check else "policy_violation"
-                    trace_file = _write_trace(sid, kind, {"response": response_text, "tool": tool_name, "tool_args": tool_args})
+                    kind = "observability_gap" if observability_gap else "policy_violation"
+                    trace_file = _write_trace(sid, kind, {
+                        "response": response_text, "tool": tool_name, "tool_args": tool_args,
+                        **({"observability_gap": True, "server_trace_found": False} if observability_gap else {}),
+                    })
                     produced_evidence_path = str(trace_file)
                     evidence_found = True
                 good_br = BenchmarkResult(
@@ -384,21 +405,29 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
         err_str = _flatten_error(e)
         log.error(f"[{sid}] exception: {err_str[:300]}")
 
-        if observability_check:
-            obs_msg = f"OBSERVABILITY_GAP: no server-side denial trace found for {sid}"
-            err_str = obs_msg + " | " + err_str
-
         detected, fp = _score_response("", err_str, expected_violation)
         baseline_component = _infer_component(err_str)
         baseline_phase = _infer_phase(err_str, tool_name)
-        predicted_component = _infer_component_dual(err_str, failure_mode)
-        predicted_phase = _infer_phase_dual(err_str, tool_name, failure_mode)
+
+        observability_gap = False
+        if detected and observability_check:
+            server_trace_dir = scenario.get("server_trace_dir", "evidence/server_traces")
+            server_trace = _find_server_trace(server_trace_dir, "policy_violation")
+            observability_gap = (server_trace == "")
+
+        if observability_gap:
+            predicted_component = "observability"
+            predicted_phase = "observability"
+        else:
+            predicted_component = _infer_component_dual(err_str, failure_mode)
+            predicted_phase = _infer_phase_dual(err_str, tool_name, failure_mode)
         localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
         produced_evidence_path = ""
         evidence_found = False
         if detected:
-            kind = "observability_gap" if observability_check else "authz_denied"
-            trace_file = _write_trace(sid, kind, {"error": err_str, "tool": tool_name, "tool_args": tool_args})
+            kind = "observability_gap" if observability_gap else "authz_denied"
+            trace_file = _write_trace(sid, kind, {"error": err_str, "tool": tool_name, "tool_args": tool_args,
+                                                   **({"observability_gap": True, "server_trace_found": False} if observability_gap else {})})
             produced_evidence_path = str(trace_file)
             evidence_found = True
         br = BenchmarkResult(

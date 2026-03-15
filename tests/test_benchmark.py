@@ -220,8 +220,8 @@ async def test_full_benchmark():
            "dual_axis should localize more than component_only (S12: authz_denied from scope misconfiguration, naive infers authz)"
 
     assert dual["localized"] == 10, f"dual_axis: expected 10 localized, got {dual['localized']}"
-    assert lifecycle["localized"] == 9, f"lifecycle_only: expected 9 localized, got {lifecycle['localized']}"
-    assert component["localized"] == 9, f"component_only: expected 9 localized, got {component['localized']}"
+    assert lifecycle["localized"] == 8, f"lifecycle_only: expected 8 localized, got {lifecycle['localized']}"
+    assert component["localized"] == 8, f"component_only: expected 8 localized, got {component['localized']}"
     assert dual["evidence_complete"] == 10, f"dual_axis: expected 10 evidence_complete, got {dual['evidence_complete']}"
 
 
