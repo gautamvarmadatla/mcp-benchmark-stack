@@ -1,0 +1,10 @@
+server: fetch_http_server
+transport: streamable_http
+endpoint: /mcp
+policy:
+  allowed_hosts:
+    - example.com
+    - httpbin.org
+  deny_unlisted_hosts: true
+  tls_validation: strict
+  log_target: stderr

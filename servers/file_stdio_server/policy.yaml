@@ -1,0 +1,8 @@
+server: file_stdio_server
+transport: stdio
+policy:
+  allowed_dir: "./sandbox"
+  deny_absolute_paths: true
+  deny_path_traversal: true
+  tool_drift_detection: true
+  log_target: stderr

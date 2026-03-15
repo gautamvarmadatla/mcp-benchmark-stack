@@ -1,0 +1,43 @@
+INFO:     Started server process [95748]
+INFO:     Waiting for application startup.
+2026-03-15 17:43:35,339 INFO StreamableHTTP session manager started
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8002 (Press CTRL+C to quit)
+2026-03-15 17:43:39,475 WARNING AUTHN_REQUIRED: no bearer token
+INFO:     127.0.0.1:57927 - "POST /mcp HTTP/1.1" 401 Unauthorized
+2026-03-15 17:43:49,959 INFO AUTH_OK: principal=user2 scope=read:metrics
+2026-03-15 17:43:49,960 INFO Created new transport with session ID: 729f2d183dc246698b7285386e080d85
+INFO:     127.0.0.1:57953 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 17:43:49,972 INFO AUTH_OK: principal=user2 scope=read:metrics
+2026-03-15 17:43:49,973 INFO AUTH_OK: principal=user2 scope=read:metrics
+INFO:     127.0.0.1:57955 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57954 - "POST /mcp HTTP/1.1" 202 Accepted
+2026-03-15 17:43:49,995 INFO AUTH_OK: principal=user2 scope=read:metrics
+INFO:     127.0.0.1:57956 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 17:43:49,996 INFO Processing request of type CallToolRequest
+2026-03-15 17:43:49,997 WARNING AUTHZ_DENIED: scope 'read:secrets' required, principal 'user2' has [read:metrics]
+2026-03-15 17:43:50,003 INFO AUTH_OK: principal=user2 scope=read:metrics
+INFO:     127.0.0.1:57957 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 17:43:50,005 INFO Processing request of type ListToolsRequest
+2026-03-15 17:43:50,012 INFO AUTH_OK: principal=user2 scope=read:metrics
+2026-03-15 17:43:50,012 INFO Terminating session: 729f2d183dc246698b7285386e080d85
+INFO:     127.0.0.1:57958 - "DELETE /mcp HTTP/1.1" 200 OK
+2026-03-15 17:43:50,247 WARNING AUTHZ_DENIED: blacklisted principal 'banned_user'
+INFO:     127.0.0.1:57959 - "POST /mcp HTTP/1.1" 403 Forbidden
+2026-03-15 17:43:52,661 INFO AUTH_OK: principal=user1 scope=read:secrets
+2026-03-15 17:43:52,661 INFO Created new transport with session ID: ffb2aae4cdfa4e13830aff151057293c
+INFO:     127.0.0.1:57970 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 17:43:52,673 INFO AUTH_OK: principal=user1 scope=read:secrets
+2026-03-15 17:43:52,674 INFO AUTH_OK: principal=user1 scope=read:secrets
+INFO:     127.0.0.1:57971 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:57972 - "GET /mcp HTTP/1.1" 200 OK
+2026-03-15 17:43:52,680 INFO AUTH_OK: principal=user1 scope=read:secrets
+INFO:     127.0.0.1:57973 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 17:43:52,681 INFO Processing request of type CallToolRequest
+2026-03-15 17:43:52,681 INFO get_secret OK: key=db_password
+2026-03-15 17:43:52,688 INFO AUTH_OK: principal=user1 scope=read:secrets
+INFO:     127.0.0.1:57974 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 17:43:52,689 INFO Processing request of type ListToolsRequest
+2026-03-15 17:43:52,696 INFO AUTH_OK: principal=user1 scope=read:secrets
+2026-03-15 17:43:52,697 INFO Terminating session: ffb2aae4cdfa4e13830aff151057293c
+INFO:     127.0.0.1:57975 - "DELETE /mcp HTTP/1.1" 200 OK

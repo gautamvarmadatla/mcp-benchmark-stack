@@ -1,0 +1,11 @@
+scenario_id,violating,detected,false_positive,component,lifecycle_phase,evidence_kind
+S1,True,True,False,scope,runtime,policy_violation
+S2,True,True,False,identity,runtime,tls_error_or_policy_violation
+S3,True,True,False,metadata,discovery,metadata_violation
+S4,True,True,False,integrity,admission,hash_mismatch
+S5,True,True,False,authz,runtime,authz_denied
+S6,True,True,False,authz,runtime,authz_denied
+S7,True,True,False,integrity,admission,hash_mismatch
+S8,True,True,False,observability,runtime,blocked_egress_log
+S9,False,False,False,scope,runtime,clean_execution
+S10,False,False,False,authz,runtime,clean_execution

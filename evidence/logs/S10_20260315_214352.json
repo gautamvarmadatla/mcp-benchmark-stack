@@ -1,0 +1,16 @@
+{
+  "scenario_id": "S10",
+  "violating": false,
+  "detected": false,
+  "component": "authz",
+  "lifecycle_phase": "runtime",
+  "evidence_kind": "clean_execution",
+  "false_positive": false,
+  "tool_called": "get_secret",
+  "tool_args": {
+    "key": "db_password"
+  },
+  "tool_response": "hunter2",
+  "error": "",
+  "timestamp": "2026-03-15T21:43:52.692751+00:00"
+}

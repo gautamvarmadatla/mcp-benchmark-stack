@@ -1,0 +1,18 @@
+server: auth_http_server
+transport: streamable_http
+endpoint: /mcp
+auth:
+  type: bearer_token
+  oauth_style: oauth2.1
+  required_scopes:
+    get_secret: ["read:secrets"]
+    admin_action: ["admin"]
+  required_roles:
+    admin_action: ["admin_user"]
+  blacklisted_principals:
+    - banned_user
+policy:
+  log_auth_decisions: true
+  deny_missing_token: true
+  deny_wrong_scope: true
+  deny_blacklisted_principals: true

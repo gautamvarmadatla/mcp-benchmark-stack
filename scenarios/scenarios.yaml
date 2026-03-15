@@ -1,0 +1,167 @@
+# MCP Benchmark Scenarios
+# 8 violating + 2 benign
+# Each has: id, description, transport, violating, component, lifecycle_phase, evidence_kind, failure_mode
+# Plus transport-specific fields: command/args/env for stdio, url/headers for http
+
+scenarios:
+
+  # --- VIOLATING ---
+
+  - id: S1
+    description: "Over-broad file scope: read_file with absolute path /"
+    transport: stdio
+    violating: true
+    component: scope
+    lifecycle_phase: runtime
+    failure_mode: over_broad_file_scope
+    evidence_kind: policy_violation
+    command: python
+    args: ["servers/file_stdio_server/server.py"]
+    env: {}
+    tool: read_file
+    tool_args:
+      path: "/etc/passwd"
+
+  - id: S2
+    description: "Invalid TLS / blocked egress: fetch URL with disallowed host"
+    transport: http
+    violating: true
+    component: identity
+    lifecycle_phase: runtime
+    failure_mode: invalid_tls_or_blocked_egress
+    evidence_kind: tls_error_or_policy_violation
+    url: "http://127.0.0.1:8001/mcp"
+    headers: {}
+    tool: fetch_url
+    tool_args:
+      url: "https://evil.example.org/data"
+
+  - id: S3
+    description: "Poisoned tool metadata: description contains script injection"
+    transport: stdio
+    violating: true
+    component: metadata
+    lifecycle_phase: discovery
+    failure_mode: poisoned_tool_description
+    evidence_kind: metadata_violation
+    command: python
+    args: ["servers/file_stdio_server/server.py"]
+    env: {}
+    tool: read_file
+    tool_args:
+      path: "hello.txt"
+    metadata_check:
+      inject_description: "<script>alert(1)</script> Read a file"
+      expect_violation: true
+
+  - id: S4
+    description: "Tool definition drift: hash mismatch after approval"
+    transport: stdio
+    violating: true
+    component: integrity
+    lifecycle_phase: admission
+    failure_mode: tool_definition_drift
+    evidence_kind: hash_mismatch
+    command: python
+    args: ["servers/file_stdio_server/server.py"]
+    env: {}
+    tool: read_file
+    tool_args:
+      path: "hello.txt"
+    integrity_check:
+      expected_hash: "WRONG_HASH_AAAA1111"
+      resource_uri: "tool-integrity://hash"
+
+  - id: S5
+    description: "Out-of-scope token: token has wrong scope for get_secret"
+    transport: http
+    violating: true
+    component: authz
+    lifecycle_phase: runtime
+    failure_mode: out_of_scope_token
+    evidence_kind: authz_denied
+    url: "http://127.0.0.1:8002/mcp"
+    headers:
+      Authorization: "Bearer scope-limited-token-xyz"
+    tool: get_secret
+    tool_args:
+      key: "db_password"
+
+  - id: S6
+    description: "Unauthorized principal: blacklisted user attempts get_secret"
+    transport: http
+    violating: true
+    component: authz
+    lifecycle_phase: runtime
+    failure_mode: unauthorized_principal
+    evidence_kind: authz_denied
+    url: "http://127.0.0.1:8002/mcp"
+    headers:
+      Authorization: "Bearer unauthorized-token-000"
+    tool: get_secret
+    tool_args:
+      key: "api_key"
+
+  - id: S7
+    description: "Tool drift: integrity resource hash does not match expected"
+    transport: stdio
+    violating: true
+    component: integrity
+    lifecycle_phase: admission
+    failure_mode: tool_drift_after_approval
+    evidence_kind: hash_mismatch
+    command: python
+    args: ["servers/file_stdio_server/server.py"]
+    env: {}
+    tool: read_file
+    tool_args:
+      path: "hello.txt"
+    integrity_check:
+      expected_hash: "APPROVED_HASH_BBBB2222"
+      resource_uri: "tool-integrity://hash"
+
+  - id: S8
+    description: "Blocked egress: fetch URL to unlisted host (observability check)"
+    transport: http
+    violating: true
+    component: observability
+    lifecycle_phase: runtime
+    failure_mode: missing_observability_evidence
+    evidence_kind: blocked_egress_log
+    url: "http://127.0.0.1:8001/mcp"
+    headers: {}
+    tool: fetch_url
+    tool_args:
+      url: "https://malicious.attacker.io/exfil"
+
+  # --- BENIGN ---
+
+  - id: S9
+    description: "Approved tool with valid scope, identity, and metadata"
+    transport: stdio
+    violating: false
+    component: scope
+    lifecycle_phase: runtime
+    failure_mode: none
+    evidence_kind: clean_execution
+    command: python
+    args: ["servers/file_stdio_server/server.py"]
+    env: {}
+    tool: read_file
+    tool_args:
+      path: "hello.txt"
+
+  - id: S10
+    description: "Authorized HTTP call with valid token, complete logs and traces"
+    transport: http
+    violating: false
+    component: authz
+    lifecycle_phase: runtime
+    failure_mode: none
+    evidence_kind: clean_execution
+    url: "http://127.0.0.1:8002/mcp"
+    headers:
+      Authorization: "Bearer valid-token-abc123"
+    tool: get_secret
+    tool_args:
+      key: "db_password"

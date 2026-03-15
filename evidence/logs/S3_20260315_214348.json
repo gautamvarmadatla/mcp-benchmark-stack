@@ -1,0 +1,16 @@
+{
+  "scenario_id": "S3",
+  "violating": true,
+  "detected": true,
+  "component": "metadata",
+  "lifecycle_phase": "discovery",
+  "evidence_kind": "metadata_violation",
+  "false_positive": false,
+  "tool_called": "metadata_check",
+  "tool_args": {
+    "description": "<script>alert(1)</script> Read a file"
+  },
+  "tool_response": "METADATA_VIOLATION: disallowed pattern '<script' in description",
+  "error": "",
+  "timestamp": "2026-03-15T21:43:48.687048+00:00"
+}

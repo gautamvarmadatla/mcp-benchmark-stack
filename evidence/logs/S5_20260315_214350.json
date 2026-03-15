@@ -1,0 +1,16 @@
+{
+  "scenario_id": "S5",
+  "violating": true,
+  "detected": true,
+  "component": "authz",
+  "lifecycle_phase": "runtime",
+  "evidence_kind": "authz_denied",
+  "false_positive": false,
+  "tool_called": "get_secret",
+  "tool_args": {
+    "key": "db_password"
+  },
+  "tool_response": "AUTHZ_DENIED: scope 'read:secrets' required, principal 'user2' has [read:metrics]",
+  "error": "",
+  "timestamp": "2026-03-15T21:43:50.008197+00:00"
+}
