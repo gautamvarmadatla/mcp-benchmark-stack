@@ -20,7 +20,6 @@ log.info(f"Tool definition hash at startup: {TOOL_DEF_HASH}")
 app = Server("file-stdio-server")
 
 def _check_scope(rel_path: str) -> Path:
-    """Resolve and check path is inside ALLOWED_DIR. Raises ValueError on violation."""
     if rel_path.startswith("/") or ".." in rel_path:
         raise ValueError(f"POLICY_VIOLATION: path '{rel_path}' uses absolute or traversal pattern")
     resolved = (ALLOWED_DIR / rel_path).resolve()

@@ -7,5 +7,7 @@ S5,True,True,False,authz,runtime,authz,runtime,True,True,authz_denied
 S6,True,True,False,authz,runtime,authz,runtime,True,False,authz_denied
 S7,True,True,False,integrity,admission,integrity,admission,True,True,hash_mismatch
 S8,True,True,False,observability,observability,observability,observability,True,True,observability_gap
+S11,True,True,False,integrity,runtime,integrity,runtime,True,True,hash_mismatch
+S12,True,True,False,scope,runtime,scope,runtime,True,True,authz_denied
 S9,False,False,False,scope,runtime,,,False,False,clean_execution
 S10,False,False,False,authz,runtime,,,False,False,clean_execution

@@ -1,7 +1,7 @@
 {
   "scenario_id": "S1",
   "kind": "policy_violation",
-  "timestamp": "20260315_220442",
+  "timestamp": "20260315_223447",
   "response": "POLICY_VIOLATION: path '/etc/passwd' uses absolute or traversal pattern",
   "tool": "read_file",
   "tool_args": {

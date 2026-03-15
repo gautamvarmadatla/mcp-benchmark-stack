@@ -1,7 +1,7 @@
 {
   "scenario_id": "S3",
   "kind": "metadata_violation",
-  "timestamp": "20260315_220442",
+  "timestamp": "20260315_223447",
   "response": "METADATA_VIOLATION: disallowed pattern '<script' in description",
   "tool_args": {
     "description": "<script>alert(1)</script> Read a file"

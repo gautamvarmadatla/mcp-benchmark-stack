@@ -1,5 +1,3 @@
-"""Policy baseline definitions for each check type."""
-
 SCOPE_POLICY = {
     "allowed_dirs": ["./sandbox"],
     "deny_absolute_paths": True,
@@ -37,7 +35,6 @@ AUTHZ_POLICY = {
 }
 
 def check_metadata(tool_description: str) -> tuple[bool, str]:
-    """Returns (ok, reason)."""
     for pattern in METADATA_POLICY["disallowed_patterns"]:
         if pattern in tool_description:
             return False, f"METADATA_VIOLATION: disallowed pattern '{pattern}' in description"

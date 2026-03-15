@@ -21,7 +21,6 @@ def _check_host(url: str) -> str:
 
 @mcp.tool()
 async def fetch_url(url: str) -> str:
-    """Fetch a URL. Only allowed hosts are permitted."""
     try:
         host = _check_host(url)
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -40,7 +39,6 @@ async def fetch_url(url: str) -> str:
 
 @mcp.tool()
 async def check_tls(url: str) -> str:
-    """Check TLS certificate for a URL."""
     try:
         _check_host(url)
         parsed = urlparse(url)

@@ -58,7 +58,6 @@ def _check_scope(required: str) -> str | None:
 
 @mcp.tool()
 def get_secret(key: str) -> str:
-    """Get a secret value. Requires scope: read:secrets."""
     denial = _check_scope("read:secrets")
     if denial:
         return denial
@@ -70,7 +69,6 @@ def get_secret(key: str) -> str:
 
 @mcp.tool()
 def admin_action(action: str) -> str:
-    """Perform admin action. Requires scope: admin."""
     denial = _check_scope("admin")
     if denial:
         return denial

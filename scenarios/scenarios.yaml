@@ -135,6 +135,49 @@ scenarios:
       url: "https://malicious.attacker.io/exfil"
     observability_check: true
 
+  # --- DIVERGENCE SCENARIOS (expose gap between modes) ---
+
+  - id: S11
+    description: >
+      Component right, phase wrong: hash mismatch detected at runtime (during live call),
+      but inference always maps HASH_MISMATCH → admission.
+      GT lifecycle_phase=runtime. Inference gives admission.
+      component_only PASSES (integrity==integrity), lifecycle_only FAILS (admission≠runtime), dual_axis FAILS.
+    transport: stdio
+    violating: true
+    component: integrity
+    lifecycle_phase: runtime
+    failure_mode: integrity_drift_detected_at_runtime
+    evidence_kind: hash_mismatch
+    command: python
+    args: ["servers/file_stdio_server/server.py"]
+    env: {}
+    tool: read_file
+    tool_args:
+      path: "hello.txt"
+    integrity_check:
+      expected_hash: "RUNTIME_DRIFT_HASH_9999"
+      resource_uri: "tool-integrity://hash"
+
+  - id: S12
+    description: >
+      Phase right, component wrong: over-broad scope causes AUTHZ_DENIED at runtime,
+      but inference maps AUTHZ_DENIED → authz. Root cause is a scope misconfiguration.
+      GT component=scope. Inference gives authz.
+      lifecycle_only PASSES (runtime==runtime), component_only FAILS (authz≠scope), dual_axis FAILS.
+    transport: http
+    violating: true
+    component: scope
+    lifecycle_phase: runtime
+    failure_mode: overbroad_scope_manifests_as_authz_denial
+    evidence_kind: authz_denied
+    url: "http://127.0.0.1:8002/mcp"
+    headers:
+      Authorization: "Bearer scope-limited-token-xyz"
+    tool: get_secret
+    tool_args:
+      key: "api_key"
+
   # --- BENIGN ---
 
   - id: S9

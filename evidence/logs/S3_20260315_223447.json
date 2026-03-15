@@ -10,7 +10,7 @@
   "predicted_phase": "discovery",
   "localization_correct": true,
   "produced_evidence_kind": "metadata_violation",
-  "produced_evidence_path": "evidence\\traces\\S3_20260315_220442_metadata_violation.json",
+  "produced_evidence_path": "evidence\\traces\\S3_20260315_223447_metadata_violation.json",
   "evidence_found": true,
   "tool_called": "metadata_check",
   "tool_args": {
@@ -18,5 +18,5 @@
   },
   "tool_response": "METADATA_VIOLATION: disallowed pattern '<script' in description",
   "error": "",
-  "timestamp": "2026-03-15T22:04:42.924568+00:00"
+  "timestamp": "2026-03-15T22:34:47.867556+00:00"
 }

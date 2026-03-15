@@ -1,0 +1,63 @@
+INFO:     Started server process [25484]
+INFO:     Waiting for application startup.
+2026-03-15 18:06:31,572 INFO StreamableHTTP session manager started
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+2026-03-15 18:06:32,378 INFO Created new transport with session ID: ea8bf5bb27b445d0b8e04f35a0f92bd4
+2026-03-15 18:06:32,379 WARNING Missing Content-Type header in POST request
+INFO:     127.0.0.1:61380 - "POST /mcp HTTP/1.1" 400 Bad Request
+2026-03-15 18:06:57,751 INFO Created new transport with session ID: 0a5714690cd8466b84d007efaeadda2e
+INFO:     127.0.0.1:61400 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61401 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:61402 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61403 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 18:06:57,764 INFO Processing request of type CallToolRequest
+2026-03-15 18:06:57,764 WARNING fetch_url DENIED: POLICY_VIOLATION: host 'evil.example.org' not in egress allowlist {'example.com', 'httpbin.org'}
+INFO:     127.0.0.1:61404 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 18:06:57,769 INFO Processing request of type ListToolsRequest
+2026-03-15 18:06:57,773 INFO Terminating session: 0a5714690cd8466b84d007efaeadda2e
+INFO:     127.0.0.1:61405 - "DELETE /mcp HTTP/1.1" 200 OK
+2026-03-15 18:06:59,966 INFO Created new transport with session ID: f1889a66520c46e1ace9dd9449dea58d
+INFO:     127.0.0.1:61419 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61420 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:61421 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61422 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 18:06:59,979 INFO Processing request of type CallToolRequest
+2026-03-15 18:06:59,979 WARNING fetch_url DENIED: POLICY_VIOLATION: host 'malicious.attacker.io' not in egress allowlist {'example.com', 'httpbin.org'}
+INFO:     127.0.0.1:61523 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 18:06:59,984 INFO Processing request of type ListToolsRequest
+2026-03-15 18:06:59,988 INFO Terminating session: f1889a66520c46e1ace9dd9449dea58d
+INFO:     127.0.0.1:61524 - "DELETE /mcp HTTP/1.1" 200 OK
+2026-03-15 18:10:21,739 INFO Created new transport with session ID: 26f25b0ee2bd455bb34d7b9243d40bba
+INFO:     127.0.0.1:57263 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57264 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:57265 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 18:10:21,752 INFO Processing request of type CallToolRequest
+2026-03-15 18:10:21,752 WARNING fetch_url DENIED: POLICY_VIOLATION: host 'evil.example.org' not in egress allowlist {'example.com', 'httpbin.org'}
+INFO:     127.0.0.1:57267 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 18:10:21,757 INFO Processing request of type ListToolsRequest
+2026-03-15 18:10:21,762 INFO Terminating session: 26f25b0ee2bd455bb34d7b9243d40bba
+INFO:     127.0.0.1:57268 - "DELETE /mcp HTTP/1.1" 200 OK
+2026-03-15 18:10:24,287 INFO Created new transport with session ID: 4509362f71ee4cc6b24967140926dd91
+INFO:     127.0.0.1:57282 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57283 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:57284 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57285 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 18:10:24,299 INFO Processing request of type CallToolRequest
+2026-03-15 18:10:24,299 WARNING fetch_url DENIED: POLICY_VIOLATION: host 'malicious.attacker.io' not in egress allowlist {'example.com', 'httpbin.org'}
+INFO:     127.0.0.1:57286 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 18:10:24,303 INFO Processing request of type ListToolsRequest
+2026-03-15 18:10:24,308 INFO Terminating session: 4509362f71ee4cc6b24967140926dd91
+INFO:     127.0.0.1:57287 - "DELETE /mcp HTTP/1.1" 200 OK
+2026-03-15 18:10:24,475 INFO Created new transport with session ID: 25075485534e464e9124a0a5b7b48aa4
+INFO:     127.0.0.1:57288 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57289 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:57290 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57291 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 18:10:24,489 INFO Processing request of type CallToolRequest
+2026-03-15 18:10:24,489 WARNING fetch_url DENIED: POLICY_VIOLATION: host 'badcert.untrusted.com' not in egress allowlist {'example.com', 'httpbin.org'}
+INFO:     127.0.0.1:57292 - "POST /mcp HTTP/1.1" 200 OK
+2026-03-15 18:10:24,494 INFO Processing request of type ListToolsRequest
+2026-03-15 18:10:24,499 INFO Terminating session: 25075485534e464e9124a0a5b7b48aa4
+INFO:     127.0.0.1:57293 - "DELETE /mcp HTTP/1.1" 200 OK
