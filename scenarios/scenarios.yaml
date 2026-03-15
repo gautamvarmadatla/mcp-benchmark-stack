@@ -23,13 +23,13 @@ scenarios:
       path: "/etc/passwd"
 
   - id: S2
-    description: "Invalid TLS / blocked egress: fetch URL with disallowed host"
+    description: "Egress policy violation: fetch_url with disallowed host (evil.example.org)"
     transport: http
     violating: true
-    component: identity
+    component: scope
     lifecycle_phase: runtime
-    failure_mode: invalid_tls_or_blocked_egress
-    evidence_kind: tls_error_or_policy_violation
+    failure_mode: egress_policy_violation
+    evidence_kind: policy_violation
     url: "http://127.0.0.1:8001/mcp"
     headers: {}
     tool: fetch_url
@@ -55,12 +55,12 @@ scenarios:
       expect_violation: true
 
   - id: S4
-    description: "Tool definition drift: hash mismatch after approval"
+    description: "Admission check: tool hash does not match any approved hash (unapproved tool at registration)"
     transport: stdio
     violating: true
     component: integrity
     lifecycle_phase: admission
-    failure_mode: tool_definition_drift
+    failure_mode: unapproved_tool_at_admission
     evidence_kind: hash_mismatch
     command: python
     args: ["servers/file_stdio_server/server.py"]
@@ -103,12 +103,12 @@ scenarios:
       key: "api_key"
 
   - id: S7
-    description: "Tool drift: integrity resource hash does not match expected"
+    description: "Drift detection: tool hash changed since approval (tool modified after being approved)"
     transport: stdio
     violating: true
     component: integrity
     lifecycle_phase: admission
-    failure_mode: tool_drift_after_approval
+    failure_mode: tool_drifted_after_approval
     evidence_kind: hash_mismatch
     command: python
     args: ["servers/file_stdio_server/server.py"]
@@ -117,22 +117,23 @@ scenarios:
     tool_args:
       path: "hello.txt"
     integrity_check:
-      expected_hash: "APPROVED_HASH_BBBB2222"
+      expected_hash: "APPROVED_HASH_CCCC3333"
       resource_uri: "tool-integrity://hash"
 
   - id: S8
-    description: "Blocked egress: fetch URL to unlisted host (observability check)"
+    description: "Observability gap: denial event occurs but no server-side trace artifact is produced"
     transport: http
     violating: true
     component: observability
-    lifecycle_phase: runtime
-    failure_mode: missing_observability_evidence
-    evidence_kind: blocked_egress_log
+    lifecycle_phase: observability
+    failure_mode: missing_server_trace
+    evidence_kind: observability_gap
     url: "http://127.0.0.1:8001/mcp"
     headers: {}
     tool: fetch_url
     tool_args:
       url: "https://malicious.attacker.io/exfil"
+    observability_check: true
 
   # --- BENIGN ---
 

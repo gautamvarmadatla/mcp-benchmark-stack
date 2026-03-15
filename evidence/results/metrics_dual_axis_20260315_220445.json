@@ -1,4 +1,5 @@
 {
+  "mode": "dual_axis",
   "violation_detection_rate": 1.0,
   "false_positive_rate": 0.0,
   "localization_accuracy": 1.0,
@@ -7,5 +8,7 @@
   "violating": 8,
   "benign": 2,
   "detected": 8,
-  "false_positives": 0
+  "false_positives": 0,
+  "localized": 8,
+  "evidence_complete": 7
 }

@@ -1,0 +1,11 @@
+scenario_id,violating,detected,false_positive,gt_component,gt_lifecycle_phase,predicted_component,predicted_phase,localization_correct,evidence_found,evidence_kind
+S1,True,True,False,scope,runtime,scope,runtime,True,True,policy_violation
+S2,True,True,False,scope,runtime,scope,runtime,True,True,policy_violation
+S3,True,True,False,metadata,discovery,metadata,discovery,True,True,metadata_violation
+S4,True,True,False,integrity,admission,integrity,admission,True,True,hash_mismatch
+S5,True,True,False,authz,runtime,authz,runtime,True,True,authz_denied
+S6,True,True,False,authz,runtime,authz,runtime,True,False,authz_denied
+S7,True,True,False,integrity,admission,integrity,admission,True,True,hash_mismatch
+S8,True,True,False,observability,observability,observability,observability,True,True,observability_gap
+S9,False,False,False,scope,runtime,,,False,False,clean_execution
+S10,False,False,False,authz,runtime,,,False,False,clean_execution

@@ -1,0 +1,22 @@
+{
+  "scenario_id": "S7",
+  "violating": true,
+  "detected": true,
+  "gt_component": "integrity",
+  "gt_lifecycle_phase": "admission",
+  "expected_evidence_kind": "hash_mismatch",
+  "false_positive": false,
+  "predicted_component": "integrity",
+  "predicted_phase": "admission",
+  "localization_correct": true,
+  "produced_evidence_kind": "hash_mismatch",
+  "produced_evidence_path": "evidence\\traces\\S7_20260315_220444_hash_mismatch.json",
+  "evidence_found": true,
+  "tool_called": "integrity_check",
+  "tool_args": {
+    "resource_uri": "tool-integrity://hash"
+  },
+  "tool_response": "HASH_MISMATCH: expected=APPROVED_HASH_CCCC3333 actual=b36370a474ddd8d7c8d2304d41e4f33720c42db8a7b8ba0849655fe1f7479f13",
+  "error": "",
+  "timestamp": "2026-03-15T22:04:44.460413+00:00"
+}
