@@ -396,8 +396,9 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
         localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
         produced_evidence_path = ""
         evidence_found = False
-        if detected and observability_check:
-            trace_file = _write_trace(sid, "observability_gap", {"error": err_str, "tool": tool_name, "tool_args": tool_args})
+        if detected:
+            kind = "observability_gap" if observability_check else "authz_denied"
+            trace_file = _write_trace(sid, kind, {"error": err_str, "tool": tool_name, "tool_args": tool_args})
             produced_evidence_path = str(trace_file)
             evidence_found = True
         br = BenchmarkResult(

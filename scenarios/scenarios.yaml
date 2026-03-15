@@ -1,5 +1,5 @@
 # MCP Benchmark Scenarios
-# 8 violating + 2 benign
+# 10 violating + 2 benign (12 total)
 # Each has: id, description, transport, violating, component, lifecycle_phase, evidence_kind, failure_mode
 # Plus transport-specific fields: command/args/env for stdio, url/headers for http
 
@@ -121,7 +121,7 @@ scenarios:
       resource_uri: "tool-integrity://hash"
 
   - id: S8
-    description: "Observability gap: denial event occurs but no server-side trace artifact is produced"
+    description: "Synthetic observability-gap injection: denial event occurs but no server-side trace artifact is produced (benchmarked injection, not an organic runtime signal)"
     transport: http
     violating: true
     component: observability
