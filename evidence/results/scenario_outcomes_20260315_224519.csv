@@ -1,0 +1,13 @@
+scenario_id,violating,detected,false_positive,gt_component,gt_lifecycle_phase,predicted_component,predicted_phase,localization_correct,baseline_component,baseline_phase,evidence_found,evidence_kind
+S1,True,True,False,scope,runtime,scope,runtime,True,scope,runtime,True,policy_violation
+S2,True,True,False,scope,runtime,scope,runtime,True,scope,runtime,True,policy_violation
+S3,True,True,False,metadata,discovery,metadata,discovery,True,metadata,discovery,True,metadata_violation
+S4,True,True,False,integrity,admission,integrity,admission,True,integrity,admission,True,hash_mismatch
+S5,True,True,False,authz,runtime,authz,runtime,True,authz,runtime,True,authz_denied
+S6,True,True,False,authz,runtime,authz,runtime,True,authz,runtime,False,authz_denied
+S7,True,True,False,integrity,admission,integrity,admission,True,integrity,admission,True,hash_mismatch
+S8,True,True,False,observability,observability,observability,observability,True,observability,observability,True,observability_gap
+S11,True,True,False,integrity,runtime,integrity,runtime,True,integrity,admission,True,hash_mismatch
+S12,True,True,False,scope,runtime,scope,runtime,True,authz,runtime,True,authz_denied
+S9,False,False,False,scope,runtime,,,False,,,False,clean_execution
+S10,False,False,False,authz,runtime,,,False,,,False,clean_execution

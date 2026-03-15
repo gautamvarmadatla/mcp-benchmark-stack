@@ -59,6 +59,7 @@ def test_score_all_detected():
     results = [
         BenchmarkResult("S1", True, True, "scope", "runtime", "policy_violation", False,
                        predicted_component="scope", predicted_phase="runtime", localization_correct=True,
+                       baseline_component="scope", baseline_phase="runtime",
                        evidence_found=True, produced_evidence_path="fake/path"),
         BenchmarkResult("S9", False, False, "scope", "runtime", "clean_execution", False),
     ]
@@ -76,20 +77,21 @@ def test_score_false_positive():
 
 def test_dual_axis_localization():
     r = BenchmarkResult("S1", True, True, "scope", "runtime", "policy_violation", False,
-                       predicted_component="scope", predicted_phase="runtime", localization_correct=True)
+                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
+                       baseline_component="scope", baseline_phase="runtime")
     assert r.gt_component != ""
     assert r.gt_lifecycle_phase != ""
 
 def test_lifecycle_only_mode():
     r = BenchmarkResult("S1", True, True, "", "runtime", "policy_violation", False,
-                       predicted_phase="runtime")
-    lifecycle_score = 1 if r.predicted_phase else 0
+                       predicted_phase="runtime", baseline_phase="runtime")
+    lifecycle_score = 1 if r.baseline_phase else 0
     assert lifecycle_score == 1
 
 def test_component_only_mode():
     r = BenchmarkResult("S1", True, True, "scope", "", "policy_violation", False,
-                       predicted_component="scope")
-    component_score = 1 if r.predicted_component else 0
+                       predicted_component="scope", baseline_component="scope")
+    component_score = 1 if r.baseline_component else 0
     assert component_score == 1
 
 
@@ -97,12 +99,15 @@ def test_dual_axis_beats_lifecycle_only():
     results = [
         BenchmarkResult("S1", True, True, "scope", "runtime", "policy_violation", False,
                        predicted_component="scope", predicted_phase="runtime", localization_correct=True,
+                       baseline_component="scope", baseline_phase="runtime",
                        evidence_found=True, produced_evidence_path="fake/path"),
         BenchmarkResult("S11", True, True, "integrity", "runtime", "hash_mismatch", False,
                        predicted_component="integrity", predicted_phase="runtime", localization_correct=True,
+                       baseline_component="integrity", baseline_phase="admission",
                        evidence_found=True, produced_evidence_path="fake/path"),
         BenchmarkResult("S12", True, True, "scope", "runtime", "authz_denied", False,
                        predicted_component="scope", predicted_phase="runtime", localization_correct=True,
+                       baseline_component="authz", baseline_phase="runtime",
                        evidence_found=True, produced_evidence_path="fake/path"),
     ]
     dual = score_results_by_mode(results, "dual_axis")
@@ -117,6 +122,7 @@ def test_component_only_misses_phase_errors():
         BenchmarkResult("SX", True, True, "scope", "runtime", "policy_violation", False,
                        predicted_component="scope", predicted_phase="admission",
                        localization_correct=False,
+                       baseline_component="scope", baseline_phase="runtime",
                        evidence_found=True, produced_evidence_path="fake/path"),
     ]
     dual = score_results_by_mode(results, "dual_axis")
@@ -130,6 +136,7 @@ def test_lifecycle_only_misses_component_errors():
         BenchmarkResult("SX", True, True, "scope", "runtime", "policy_violation", False,
                        predicted_component="authz", predicted_phase="runtime",
                        localization_correct=False,
+                       baseline_component="authz", baseline_phase="runtime",
                        evidence_found=True, produced_evidence_path="fake/path"),
     ]
     dual = score_results_by_mode(results, "dual_axis")
@@ -142,6 +149,7 @@ def test_evidence_completeness_requires_real_artifact():
     results = [
         BenchmarkResult("S1", True, True, "scope", "runtime", "policy_violation", False,
                        predicted_component="scope", predicted_phase="runtime", localization_correct=True,
+                       baseline_component="scope", baseline_phase="runtime",
                        evidence_found=False, produced_evidence_path=""),
     ]
     m = score_results_by_mode(results, "dual_axis")
@@ -152,6 +160,7 @@ def test_benign_produces_no_false_positive():
     results = [
         BenchmarkResult("S9", False, False, "scope", "runtime", "clean_execution", False,
                        predicted_component="", predicted_phase="", localization_correct=False,
+                       baseline_component="", baseline_phase="",
                        evidence_found=False),
     ]
     m = score_results_by_mode(results, "dual_axis")
@@ -206,6 +215,6 @@ async def test_full_benchmark():
     assert dual["localization_accuracy"] >= lifecycle["localization_accuracy"] - 0.01
     assert dual["localization_accuracy"] >= component["localization_accuracy"] - 0.01
     assert dual["localized"] > lifecycle["localized"], \
-           "dual_axis should localize more than lifecycle_only (S11 disambiguation)"
+           "dual_axis should localize more than lifecycle_only (S11: hash_mismatch at runtime, naive infers admission)"
     assert dual["localized"] > component["localized"], \
-           "dual_axis should localize more than component_only (S12 disambiguation)"
+           "dual_axis should localize more than component_only (S12: authz_denied from scope misconfiguration, naive infers authz)"

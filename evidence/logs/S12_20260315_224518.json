@@ -1,0 +1,24 @@
+{
+  "scenario_id": "S12",
+  "violating": true,
+  "detected": true,
+  "gt_component": "scope",
+  "gt_lifecycle_phase": "runtime",
+  "expected_evidence_kind": "authz_denied",
+  "false_positive": false,
+  "predicted_component": "scope",
+  "predicted_phase": "runtime",
+  "localization_correct": true,
+  "baseline_component": "authz",
+  "baseline_phase": "runtime",
+  "produced_evidence_kind": "policy_violation",
+  "produced_evidence_path": "evidence\\traces\\S12_20260315_224518_policy_violation.json",
+  "evidence_found": true,
+  "tool_called": "get_secret",
+  "tool_args": {
+    "key": "api_key"
+  },
+  "tool_response": "AUTHZ_DENIED: scope 'read:secrets' required, principal 'user2' has [read:metrics]",
+  "error": "",
+  "timestamp": "2026-03-15T22:45:18.318466+00:00"
+}

@@ -44,6 +44,8 @@ class BenchmarkResult:
     predicted_component: str = ""
     predicted_phase: str = ""
     localization_correct: bool = False
+    baseline_component: str = ""
+    baseline_phase: str = ""
     produced_evidence_kind: str = ""
     produced_evidence_path: str = ""
     evidence_found: bool = False
@@ -88,23 +90,6 @@ def _infer_phase(text: str, tool_called: str) -> str:
     if "TLS_ERROR" in t:
         return "runtime"
     return ""
-
-
-_EVIDENCE_TO_NAIVE_COMPONENT: dict[str, str] = {
-    "hash_mismatch": "integrity",
-    "metadata_violation": "metadata",
-    "policy_violation": "scope",
-    "authz_denied": "authz",
-    "observability_gap": "observability",
-}
-
-_EVIDENCE_TO_NAIVE_PHASE: dict[str, str] = {
-    "hash_mismatch": "admission",
-    "metadata_violation": "discovery",
-    "policy_violation": "runtime",
-    "authz_denied": "runtime",
-    "observability_gap": "observability",
-}
 
 
 def _infer_component_dual(text: str, failure_mode: str = "") -> str:
@@ -186,6 +171,8 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
                     ok, reason = check_metadata(mc.get("inject_description", ""))
                     response_text = reason if not ok else "metadata ok"
                     detected, fp = _score_response(response_text, "", expected_violation)
+                    baseline_component = _infer_component(response_text)
+                    baseline_phase = _infer_phase(response_text, "metadata_check")
                     predicted_component = _infer_component_dual(response_text, failure_mode)
                     predicted_phase = _infer_phase_dual(response_text, "metadata_check", failure_mode)
                     localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
@@ -201,6 +188,7 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
                         expected_evidence_kind=expected_evidence_kind,
                         predicted_component=predicted_component, predicted_phase=predicted_phase,
                         localization_correct=localization_correct,
+                        baseline_component=baseline_component, baseline_phase=baseline_phase,
                         produced_evidence_kind="metadata_violation" if detected else "",
                         produced_evidence_path=produced_evidence_path,
                         evidence_found=evidence_found,
@@ -227,6 +215,8 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
                         response_text = f"hash_ok: {actual_hash}"
                     log.info(f"[{sid}] integrity: {response_text}")
                     detected, fp = _score_response(response_text, "", expected_violation)
+                    baseline_component = _infer_component(response_text)
+                    baseline_phase = _infer_phase(response_text, "integrity_check")
                     predicted_component = _infer_component_dual(response_text, failure_mode)
                     predicted_phase = _infer_phase_dual(response_text, "integrity_check", failure_mode)
                     localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
@@ -242,6 +232,7 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
                         expected_evidence_kind=expected_evidence_kind,
                         predicted_component=predicted_component, predicted_phase=predicted_phase,
                         localization_correct=localization_correct,
+                        baseline_component=baseline_component, baseline_phase=baseline_phase,
                         produced_evidence_kind="hash_mismatch" if detected else "",
                         produced_evidence_path=produced_evidence_path,
                         evidence_found=evidence_found,
@@ -257,6 +248,8 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
                     response_text = "\n".join(c.text for c in result.content if hasattr(c, "text"))
                     log.info(f"[{sid}] response: {response_text[:200]}")
                     detected, fp = _score_response(response_text, "", expected_violation)
+                    baseline_component = _infer_component(response_text)
+                    baseline_phase = _infer_phase(response_text, tool_name)
                     predicted_component = _infer_component_dual(response_text, failure_mode)
                     predicted_phase = _infer_phase_dual(response_text, tool_name, failure_mode)
                     localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
@@ -272,6 +265,7 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
                         expected_evidence_kind=expected_evidence_kind,
                         predicted_component=predicted_component, predicted_phase=predicted_phase,
                         localization_correct=localization_correct,
+                        baseline_component=baseline_component, baseline_phase=baseline_phase,
                         produced_evidence_kind="policy_violation" if detected else "",
                         produced_evidence_path=produced_evidence_path,
                         evidence_found=evidence_found,
@@ -287,6 +281,8 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
         err_str = _flatten_error(e)
         log.error(f"[{sid}] exception: {err_str[:200]}")
         detected, fp = _score_response("", err_str, expected_violation)
+        baseline_component = _infer_component(err_str)
+        baseline_phase = _infer_phase(err_str, "")
         predicted_component = _infer_component_dual(err_str, failure_mode)
         predicted_phase = _infer_phase_dual(err_str, "", failure_mode)
         localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
@@ -296,6 +292,7 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
             expected_evidence_kind=expected_evidence_kind,
             predicted_component=predicted_component, predicted_phase=predicted_phase,
             localization_correct=localization_correct,
+            baseline_component=baseline_component, baseline_phase=baseline_phase,
             false_positive=fp,
             error=err_str,
         )
@@ -340,6 +337,8 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
                     response_text = obs_msg
 
                 detected, fp = _score_response(response_text, "", expected_violation)
+                baseline_component = _infer_component(response_text)
+                baseline_phase = _infer_phase(response_text, tool_name)
                 predicted_component = _infer_component_dual(response_text, failure_mode)
                 predicted_phase = _infer_phase_dual(response_text, tool_name, failure_mode)
                 localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
@@ -356,6 +355,7 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
                     expected_evidence_kind=expected_evidence_kind,
                     predicted_component=predicted_component, predicted_phase=predicted_phase,
                     localization_correct=localization_correct,
+                    baseline_component=baseline_component, baseline_phase=baseline_phase,
                     produced_evidence_kind=kind if detected else "",
                     produced_evidence_path=produced_evidence_path,
                     evidence_found=evidence_found,
@@ -376,6 +376,8 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
             err_str = obs_msg + " | " + err_str
 
         detected, fp = _score_response("", err_str, expected_violation)
+        baseline_component = _infer_component(err_str)
+        baseline_phase = _infer_phase(err_str, tool_name)
         predicted_component = _infer_component_dual(err_str, failure_mode)
         predicted_phase = _infer_phase_dual(err_str, tool_name, failure_mode)
         localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
@@ -391,6 +393,7 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
             expected_evidence_kind=expected_evidence_kind,
             predicted_component=predicted_component, predicted_phase=predicted_phase,
             localization_correct=localization_correct,
+            baseline_component=baseline_component, baseline_phase=baseline_phase,
             produced_evidence_path=produced_evidence_path,
             evidence_found=evidence_found,
             false_positive=fp,
@@ -410,10 +413,10 @@ def score_results_by_mode(results: list[BenchmarkResult], mode: str) -> dict:
 
     if mode == "lifecycle_only":
         localized = [r for r in detected
-                     if _EVIDENCE_TO_NAIVE_PHASE.get(r.expected_evidence_kind, "") == r.gt_lifecycle_phase]
+                     if r.baseline_phase == r.gt_lifecycle_phase and r.baseline_phase != ""]
     elif mode == "component_only":
         localized = [r for r in detected
-                     if _EVIDENCE_TO_NAIVE_COMPONENT.get(r.expected_evidence_kind, "") == r.gt_component]
+                     if r.baseline_component == r.gt_component and r.baseline_component != ""]
     else:
         localized = [r for r in detected if r.localization_correct]
 
@@ -471,8 +474,9 @@ def export_results(results: list[BenchmarkResult], metrics_dual: dict, metrics_l
         summary_fields = [
             "scenario_id", "violating", "detected", "false_positive",
             "gt_component", "gt_lifecycle_phase",
-            "predicted_component", "predicted_phase",
-            "localization_correct", "evidence_found", "evidence_kind",
+            "predicted_component", "predicted_phase", "localization_correct",
+            "baseline_component", "baseline_phase",
+            "evidence_found", "evidence_kind",
         ]
         w = csv.DictWriter(f, fieldnames=summary_fields)
         w.writeheader()
@@ -487,6 +491,8 @@ def export_results(results: list[BenchmarkResult], metrics_dual: dict, metrics_l
                 "predicted_component": r.predicted_component,
                 "predicted_phase": r.predicted_phase,
                 "localization_correct": r.localization_correct,
+                "baseline_component": r.baseline_component,
+                "baseline_phase": r.baseline_phase,
                 "evidence_found": r.evidence_found,
                 "evidence_kind": r.expected_evidence_kind,
             })

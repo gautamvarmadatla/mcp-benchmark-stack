@@ -1,0 +1,8 @@
+{
+  "scenario_id": "S11",
+  "kind": "hash_mismatch",
+  "timestamp": "20260315_224518",
+  "response": "HASH_MISMATCH: expected=RUNTIME_DRIFT_HASH_9999 actual=b36370a474ddd8d7c8d2304d41e4f33720c42db8a7b8ba0849655fe1f7479f13",
+  "expected_hash": "RUNTIME_DRIFT_HASH_9999",
+  "actual_hash": "b36370a474ddd8d7c8d2304d41e4f33720c42db8a7b8ba0849655fe1f7479f13"
+}
