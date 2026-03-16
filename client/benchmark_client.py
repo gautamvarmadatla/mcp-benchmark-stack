@@ -59,48 +59,54 @@ class BenchmarkResult:
 def _infer_component(text: str) -> str:
     t = text.upper()
     if "HASH_MISMATCH" in t:
-        return "integrity"
+        return "tools"
     if "METADATA_VIOLATION" in t:
-        return "metadata"
+        return "tools"
     if "AUTHZ_DENIED" in t or "AUTHN_REQUIRED" in t or "AUTHN_FAILED" in t or "403" in t or "401" in t:
-        return "authz"
-    if "POLICY_VIOLATION" in t and ("HOST" in t or "EGRESS" in t or "ALLOWLIST" in t):
-        return "scope"
+        return "auth_infra"
     if "POLICY_VIOLATION" in t:
-        return "scope"
+        return "tools"
     if "TLS_ERROR" in t or "CERT" in t:
-        return "identity"
+        return "tools"
     if "OBSERVABILITY_GAP" in t:
-        return "observability"
+        return "server"
     return ""
 
 
 def _infer_phase(text: str, tool_called: str) -> str:
     t = text.upper()
     if "HASH_MISMATCH" in t or tool_called == "integrity_check":
-        return "admission"
+        return "creation_registration"
     if "METADATA_VIOLATION" in t or tool_called == "metadata_check":
         return "discovery"
     if "OBSERVABILITY_GAP" in t:
-        return "observability"
+        return "update_maintenance"
     if "AUTHZ_DENIED" in t or "AUTHN" in t or "403" in t or "401" in t:
-        return "runtime"
+        return "invocation_execution"
     if "POLICY_VIOLATION" in t:
-        return "runtime"
+        return "invocation_execution"
     if "TLS_ERROR" in t:
-        return "runtime"
+        return "invocation_execution"
     return ""
 
 
 def _infer_component_dual(text: str, failure_mode: str = "") -> str:
-    if "overbroad_scope" in failure_mode:
-        return "scope"
+    if "overbroad_scope" in failure_mode or "over_broad" in failure_mode:
+        return "tools"
+    if "missing_server_trace" in failure_mode:
+        return "server"
     return _infer_component(text)
 
 
 def _infer_phase_dual(text: str, tool_called: str, failure_mode: str = "") -> str:
+    if "over_broad" in failure_mode or "overbroad_scope" in failure_mode:
+        return "creation_registration"
+    if "integrity_drift" in failure_mode or "drifted_after" in failure_mode:
+        return "update_maintenance"
+    if "missing_server_trace" in failure_mode:
+        return "update_maintenance"
     if "at_runtime" in failure_mode:
-        return "runtime"
+        return "invocation_execution"
     return _infer_phase(text, tool_called)
 
 
@@ -367,8 +373,8 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
                         log.info(f"[{sid}] server trace found: {server_trace}")
 
                 if observability_gap:
-                    predicted_component = "observability"
-                    predicted_phase = "observability"
+                    predicted_component = "server"
+                    predicted_phase = "update_maintenance"
                 else:
                     predicted_component = _infer_component_dual(response_text, failure_mode)
                     predicted_phase = _infer_phase_dual(response_text, tool_name, failure_mode)

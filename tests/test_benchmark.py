@@ -57,11 +57,11 @@ def test_host_policy_allowed():
 
 def test_score_all_detected():
     results = [
-        BenchmarkResult("S1", True, True, "scope", "runtime", "policy_violation", False,
-                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
-                       baseline_component="scope", baseline_phase="runtime",
+        BenchmarkResult("S1", True, True, "tools", "invocation_execution", "policy_violation", False,
+                       predicted_component="tools", predicted_phase="invocation_execution", localization_correct=True,
+                       baseline_component="tools", baseline_phase="invocation_execution",
                        evidence_found=True, produced_evidence_path="fake/path"),
-        BenchmarkResult("S9", False, False, "scope", "runtime", "clean_execution", False),
+        BenchmarkResult("S9", False, False, "tools", "creation_registration", "clean_execution", False),
     ]
     metrics = score_results(results)
     assert metrics["violation_detection_rate"] == 1.0
@@ -69,45 +69,45 @@ def test_score_all_detected():
 
 def test_score_false_positive():
     results = [
-        BenchmarkResult("S9", False, False, "scope", "runtime", "clean_execution", True),
+        BenchmarkResult("S9", False, False, "tools", "creation_registration", "clean_execution", True),
     ]
     metrics = score_results(results)
     assert metrics["false_positive_rate"] == 1.0
 
 
 def test_dual_axis_localization():
-    r = BenchmarkResult("S1", True, True, "scope", "runtime", "policy_violation", False,
-                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
-                       baseline_component="scope", baseline_phase="runtime")
+    r = BenchmarkResult("S1", True, True, "tools", "invocation_execution", "policy_violation", False,
+                       predicted_component="tools", predicted_phase="invocation_execution", localization_correct=True,
+                       baseline_component="tools", baseline_phase="invocation_execution")
     assert r.gt_component != ""
     assert r.gt_lifecycle_phase != ""
 
 def test_lifecycle_only_mode():
-    r = BenchmarkResult("S1", True, True, "", "runtime", "policy_violation", False,
-                       predicted_phase="runtime", baseline_phase="runtime")
+    r = BenchmarkResult("S1", True, True, "", "invocation_execution", "policy_violation", False,
+                       predicted_phase="invocation_execution", baseline_phase="invocation_execution")
     lifecycle_score = 1 if r.baseline_phase else 0
     assert lifecycle_score == 1
 
 def test_component_only_mode():
-    r = BenchmarkResult("S1", True, True, "scope", "", "policy_violation", False,
-                       predicted_component="scope", baseline_component="scope")
+    r = BenchmarkResult("S1", True, True, "tools", "", "policy_violation", False,
+                       predicted_component="tools", baseline_component="tools")
     component_score = 1 if r.baseline_component else 0
     assert component_score == 1
 
 
 def test_dual_axis_beats_lifecycle_only():
     results = [
-        BenchmarkResult("S1", True, True, "scope", "runtime", "policy_violation", False,
-                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
-                       baseline_component="scope", baseline_phase="runtime",
+        BenchmarkResult("S1", True, True, "tools", "creation_registration", "policy_violation", False,
+                       predicted_component="tools", predicted_phase="creation_registration", localization_correct=True,
+                       baseline_component="tools", baseline_phase="invocation_execution",
                        evidence_found=True, produced_evidence_path="fake/path"),
-        BenchmarkResult("S11", True, True, "integrity", "runtime", "hash_mismatch", False,
-                       predicted_component="integrity", predicted_phase="runtime", localization_correct=True,
-                       baseline_component="integrity", baseline_phase="admission",
+        BenchmarkResult("S11", True, True, "tools", "update_maintenance", "hash_mismatch", False,
+                       predicted_component="tools", predicted_phase="update_maintenance", localization_correct=True,
+                       baseline_component="tools", baseline_phase="creation_registration",
                        evidence_found=True, produced_evidence_path="fake/path"),
-        BenchmarkResult("S12", True, True, "scope", "runtime", "authz_denied", False,
-                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
-                       baseline_component="authz", baseline_phase="runtime",
+        BenchmarkResult("S12", True, True, "tools", "creation_registration", "authz_denied", False,
+                       predicted_component="tools", predicted_phase="creation_registration", localization_correct=True,
+                       baseline_component="auth_infra", baseline_phase="invocation_execution",
                        evidence_found=True, produced_evidence_path="fake/path"),
     ]
     dual = score_results_by_mode(results, "dual_axis")
@@ -119,10 +119,10 @@ def test_dual_axis_beats_lifecycle_only():
 
 def test_component_only_misses_phase_errors():
     results = [
-        BenchmarkResult("SX", True, True, "scope", "runtime", "policy_violation", False,
-                       predicted_component="scope", predicted_phase="admission",
+        BenchmarkResult("SX", True, True, "tools", "invocation_execution", "policy_violation", False,
+                       predicted_component="tools", predicted_phase="creation_registration",
                        localization_correct=False,
-                       baseline_component="scope", baseline_phase="runtime",
+                       baseline_component="tools", baseline_phase="invocation_execution",
                        evidence_found=True, produced_evidence_path="fake/path"),
     ]
     dual = score_results_by_mode(results, "dual_axis")
@@ -133,10 +133,10 @@ def test_component_only_misses_phase_errors():
 
 def test_lifecycle_only_misses_component_errors():
     results = [
-        BenchmarkResult("SX", True, True, "scope", "runtime", "policy_violation", False,
-                       predicted_component="authz", predicted_phase="runtime",
+        BenchmarkResult("SX", True, True, "tools", "invocation_execution", "policy_violation", False,
+                       predicted_component="auth_infra", predicted_phase="invocation_execution",
                        localization_correct=False,
-                       baseline_component="authz", baseline_phase="runtime",
+                       baseline_component="auth_infra", baseline_phase="invocation_execution",
                        evidence_found=True, produced_evidence_path="fake/path"),
     ]
     dual = score_results_by_mode(results, "dual_axis")
@@ -147,9 +147,9 @@ def test_lifecycle_only_misses_component_errors():
 
 def test_evidence_completeness_requires_real_artifact():
     results = [
-        BenchmarkResult("S1", True, True, "scope", "runtime", "policy_violation", False,
-                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
-                       baseline_component="scope", baseline_phase="runtime",
+        BenchmarkResult("S1", True, True, "tools", "invocation_execution", "policy_violation", False,
+                       predicted_component="tools", predicted_phase="invocation_execution", localization_correct=True,
+                       baseline_component="tools", baseline_phase="invocation_execution",
                        evidence_found=False, produced_evidence_path=""),
     ]
     m = score_results_by_mode(results, "dual_axis")
@@ -158,7 +158,7 @@ def test_evidence_completeness_requires_real_artifact():
 
 def test_benign_produces_no_false_positive():
     results = [
-        BenchmarkResult("S9", False, False, "scope", "runtime", "clean_execution", False,
+        BenchmarkResult("S9", False, False, "tools", "creation_registration", "clean_execution", False,
                        predicted_component="", predicted_phase="", localization_correct=False,
                        baseline_component="", baseline_phase="",
                        evidence_found=False),
@@ -215,12 +215,12 @@ async def test_full_benchmark():
     assert dual["localization_accuracy"] >= lifecycle["localization_accuracy"] - 0.01
     assert dual["localization_accuracy"] >= component["localization_accuracy"] - 0.01
     assert dual["localized"] > lifecycle["localized"], \
-           "dual_axis should localize more than lifecycle_only (S11: hash_mismatch at runtime, naive infers admission)"
+           "dual_axis should localize more than lifecycle_only"
     assert dual["localized"] > component["localized"], \
-           "dual_axis should localize more than component_only (S12: authz_denied from scope misconfiguration, naive infers authz)"
+           "dual_axis should localize more than component_only"
 
     assert dual["localized"] == 10, f"dual_axis: expected 10 localized, got {dual['localized']}"
-    assert lifecycle["localized"] == 8, f"lifecycle_only: expected 8 localized, got {lifecycle['localized']}"
+    assert lifecycle["localized"] == 5, f"lifecycle_only: expected 5 localized, got {lifecycle['localized']}"
     assert component["localized"] == 8, f"component_only: expected 8 localized, got {component['localized']}"
     assert dual["evidence_complete"] == 10, f"dual_axis: expected 10 evidence_complete, got {dual['evidence_complete']}"
 
@@ -229,27 +229,27 @@ async def test_full_benchmark():
 
 def test_infer_component_hash_mismatch():
     from client.benchmark_client import _infer_component
-    assert _infer_component("HASH_MISMATCH: expected=X actual=Y") == "integrity"
+    assert _infer_component("HASH_MISMATCH: expected=X actual=Y") == "tools"
 
 def test_infer_component_metadata_violation():
     from client.benchmark_client import _infer_component
-    assert _infer_component("METADATA_VIOLATION: disallowed pattern") == "metadata"
+    assert _infer_component("METADATA_VIOLATION: disallowed pattern") == "tools"
 
 def test_infer_component_authz_denied():
     from client.benchmark_client import _infer_component
-    assert _infer_component("AUTHZ_DENIED: scope required") == "authz"
+    assert _infer_component("AUTHZ_DENIED: scope required") == "auth_infra"
 
 def test_infer_component_policy_violation_egress():
     from client.benchmark_client import _infer_component
-    assert _infer_component("POLICY_VIOLATION: host 'evil.com' not in egress allowlist") == "scope"
+    assert _infer_component("POLICY_VIOLATION: host 'evil.com' not in egress allowlist") == "tools"
 
 def test_infer_component_observability_gap():
     from client.benchmark_client import _infer_component
-    assert _infer_component("OBSERVABILITY_GAP: no server trace") == "observability"
+    assert _infer_component("OBSERVABILITY_GAP: no server trace") == "server"
 
 def test_infer_phase_hash_mismatch():
     from client.benchmark_client import _infer_phase
-    assert _infer_phase("HASH_MISMATCH: expected=X actual=Y", "integrity_check") == "admission"
+    assert _infer_phase("HASH_MISMATCH: expected=X actual=Y", "integrity_check") == "creation_registration"
 
 def test_infer_phase_metadata_violation():
     from client.benchmark_client import _infer_phase
@@ -257,65 +257,65 @@ def test_infer_phase_metadata_violation():
 
 def test_infer_phase_observability_gap():
     from client.benchmark_client import _infer_phase
-    assert _infer_phase("OBSERVABILITY_GAP: no trace", "") == "observability"
+    assert _infer_phase("OBSERVABILITY_GAP: no trace", "") == "update_maintenance"
 
 def test_infer_phase_authz_denied():
     from client.benchmark_client import _infer_phase
-    assert _infer_phase("AUTHZ_DENIED: scope mismatch", "get_secret") == "runtime"
+    assert _infer_phase("AUTHZ_DENIED: scope mismatch", "get_secret") == "invocation_execution"
 
 def test_infer_component_dual_overbroad_scope():
     from client.benchmark_client import _infer_component_dual
-    assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", "overbroad_scope_manifests_as_authz_denial") == "scope"
+    assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", "overbroad_scope_manifests_as_authz_denial") == "tools"
 
 def test_infer_component_dual_fallback():
     from client.benchmark_client import _infer_component_dual
-    assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", "unauthorized_principal") == "authz"
+    assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", "unauthorized_principal") == "auth_infra"
 
 def test_infer_phase_dual_at_runtime():
     from client.benchmark_client import _infer_phase_dual
-    assert _infer_phase_dual("HASH_MISMATCH: expected=X actual=Y", "integrity_check", "integrity_drift_detected_at_runtime") == "runtime"
+    assert _infer_phase_dual("HASH_MISMATCH: expected=X actual=Y", "integrity_check", "integrity_drift_detected_at_runtime") == "update_maintenance"
 
 def test_infer_phase_dual_fallback():
     from client.benchmark_client import _infer_phase_dual
-    assert _infer_phase_dual("HASH_MISMATCH: expected=X actual=Y", "integrity_check", "unapproved_tool_at_admission") == "admission"
+    assert _infer_phase_dual("HASH_MISMATCH: expected=X actual=Y", "integrity_check", "unapproved_tool_at_admission") == "creation_registration"
 
 # --- Golden tests: S11 and S12 create exactly the right divergence ---
 
 def test_s11_golden_divergence():
     results = [
-        BenchmarkResult("S11", True, True, "integrity", "runtime", "hash_mismatch", False,
-                       predicted_component="integrity", predicted_phase="runtime", localization_correct=True,
-                       baseline_component="integrity", baseline_phase="admission",
+        BenchmarkResult("S11", True, True, "tools", "update_maintenance", "hash_mismatch", False,
+                       predicted_component="tools", predicted_phase="update_maintenance", localization_correct=True,
+                       baseline_component="tools", baseline_phase="creation_registration",
                        evidence_found=True, produced_evidence_path="fake/path"),
     ]
     dual = score_results_by_mode(results, "dual_axis")
     lifecycle = score_results_by_mode(results, "lifecycle_only")
     component = score_results_by_mode(results, "component_only")
     assert dual["localization_accuracy"] == 1.0
-    assert lifecycle["localization_accuracy"] == 0.0
-    assert component["localization_accuracy"] == 1.0
+    assert lifecycle["localization_accuracy"] == 0.0   # creation_registration != update_maintenance
+    assert component["localization_accuracy"] == 1.0   # tools == tools
 
 def test_s12_golden_divergence():
     results = [
-        BenchmarkResult("S12", True, True, "scope", "runtime", "authz_denied", False,
-                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
-                       baseline_component="authz", baseline_phase="runtime",
+        BenchmarkResult("S12", True, True, "tools", "creation_registration", "authz_denied", False,
+                       predicted_component="tools", predicted_phase="creation_registration", localization_correct=True,
+                       baseline_component="auth_infra", baseline_phase="invocation_execution",
                        evidence_found=True, produced_evidence_path="fake/path"),
     ]
     dual = score_results_by_mode(results, "dual_axis")
     lifecycle = score_results_by_mode(results, "lifecycle_only")
     component = score_results_by_mode(results, "component_only")
     assert dual["localization_accuracy"] == 1.0
-    assert lifecycle["localization_accuracy"] == 1.0
-    assert component["localization_accuracy"] == 0.0
+    assert lifecycle["localization_accuracy"] == 0.0   # invocation_execution != creation_registration
+    assert component["localization_accuracy"] == 0.0   # auth_infra != tools
 
 # --- Regression: baselines use baseline_* fields, not expected_evidence_kind ---
 
 def test_baselines_do_not_use_metadata():
     results = [
-        BenchmarkResult("SX", True, True, "scope", "runtime", "policy_violation", False,
-                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
-                       baseline_component="authz", baseline_phase="admission",
+        BenchmarkResult("SX", True, True, "tools", "invocation_execution", "policy_violation", False,
+                       predicted_component="tools", predicted_phase="invocation_execution", localization_correct=True,
+                       baseline_component="auth_infra", baseline_phase="creation_registration",
                        evidence_found=True, produced_evidence_path="fake/path"),
     ]
     lifecycle = score_results_by_mode(results, "lifecycle_only")
@@ -348,9 +348,9 @@ def test_artifact_validation_missing_fields(tmp_path):
 
 def test_scoring_determinism():
     results = [
-        BenchmarkResult("S1", True, True, "scope", "runtime", "policy_violation", False,
-                       predicted_component="scope", predicted_phase="runtime", localization_correct=True,
-                       baseline_component="scope", baseline_phase="runtime",
+        BenchmarkResult("S1", True, True, "tools", "invocation_execution", "policy_violation", False,
+                       predicted_component="tools", predicted_phase="invocation_execution", localization_correct=True,
+                       baseline_component="tools", baseline_phase="invocation_execution",
                        evidence_found=True, produced_evidence_path="fake/path"),
     ]
     m1 = score_results_by_mode(results, "dual_axis")

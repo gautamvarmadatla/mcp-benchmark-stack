@@ -2,6 +2,8 @@
 # 10 violating + 2 benign (12 total)
 # Each has: id, description, transport, violating, component, lifecycle_phase, evidence_kind, failure_mode
 # Plus transport-specific fields: command/args/env for stdio, url/headers for http
+# Components: tools, auth_infra, server
+# Lifecycle phases: creation_registration, discovery, invocation_execution, update_maintenance
 
 scenarios:
 
@@ -11,8 +13,8 @@ scenarios:
     description: "Over-broad file scope: read_file with absolute path /"
     transport: stdio
     violating: true
-    component: scope
-    lifecycle_phase: runtime
+    component: tools
+    lifecycle_phase: creation_registration
     failure_mode: over_broad_file_scope
     evidence_kind: policy_violation
     command: python
@@ -26,8 +28,8 @@ scenarios:
     description: "Egress-policy denial: outbound fetch to blocklisted host (evil.example.org)"
     transport: http
     violating: true
-    component: scope
-    lifecycle_phase: runtime
+    component: tools
+    lifecycle_phase: invocation_execution
     failure_mode: egress_policy_denial
     evidence_kind: policy_violation
     url: "http://127.0.0.1:8001/mcp"
@@ -40,7 +42,7 @@ scenarios:
     description: "Poisoned tool metadata: description contains script injection"
     transport: stdio
     violating: true
-    component: metadata
+    component: tools
     lifecycle_phase: discovery
     failure_mode: poisoned_tool_description
     evidence_kind: metadata_violation
@@ -58,8 +60,8 @@ scenarios:
     description: "Admission check: tool hash not in approved set — unapproved tool rejected at registration"
     transport: stdio
     violating: true
-    component: integrity
-    lifecycle_phase: admission
+    component: tools
+    lifecycle_phase: creation_registration
     failure_mode: unapproved_tool_at_admission
     evidence_kind: hash_mismatch
     command: python
@@ -76,8 +78,8 @@ scenarios:
     description: "Out-of-scope token: token has wrong scope for get_secret"
     transport: http
     violating: true
-    component: authz
-    lifecycle_phase: runtime
+    component: auth_infra
+    lifecycle_phase: invocation_execution
     failure_mode: out_of_scope_token
     evidence_kind: authz_denied
     url: "http://127.0.0.1:8002/mcp"
@@ -91,8 +93,8 @@ scenarios:
     description: "Unauthorized principal: blacklisted user attempts get_secret"
     transport: http
     violating: true
-    component: authz
-    lifecycle_phase: runtime
+    component: auth_infra
+    lifecycle_phase: invocation_execution
     failure_mode: unauthorized_principal
     evidence_kind: authz_denied
     url: "http://127.0.0.1:8002/mcp"
@@ -106,8 +108,8 @@ scenarios:
     description: "Post-approval drift: tool definition modified after approval, hash diverged from registered value"
     transport: stdio
     violating: true
-    component: integrity
-    lifecycle_phase: admission
+    component: tools
+    lifecycle_phase: update_maintenance
     failure_mode: tool_drifted_after_approval
     evidence_kind: hash_mismatch
     command: python
@@ -124,8 +126,8 @@ scenarios:
     description: "Observability gap: real egress denial occurs but server is configured not to emit the denial trace artifact"
     transport: http
     violating: true
-    component: observability
-    lifecycle_phase: observability
+    component: server
+    lifecycle_phase: update_maintenance
     failure_mode: missing_server_trace
     evidence_kind: observability_gap
     url: "http://127.0.0.1:8003/mcp"
@@ -139,11 +141,11 @@ scenarios:
   # --- DIVERGENCE SCENARIOS (expose gap between modes) ---
 
   - id: S11
-    description: "Integrity drift detected at runtime — naive phase inference maps HASH_MISMATCH to admission, GT phase is runtime"
+    description: "Integrity drift detected at runtime — naive phase inference maps HASH_MISMATCH to creation_registration, GT phase is update_maintenance"
     transport: stdio
     violating: true
-    component: integrity
-    lifecycle_phase: runtime
+    component: tools
+    lifecycle_phase: update_maintenance
     failure_mode: integrity_drift_detected_at_runtime
     evidence_kind: hash_mismatch
     command: python
@@ -157,11 +159,11 @@ scenarios:
       resource_uri: "tool-integrity://hash"
 
   - id: S12
-    description: "Overbroad scope surfaces as authz denial — naive component inference maps AUTHZ_DENIED to authz, GT component is scope"
+    description: "Overbroad scope surfaces as authz denial — naive component inference maps AUTHZ_DENIED to auth_infra, GT component is tools"
     transport: http
     violating: true
-    component: scope
-    lifecycle_phase: runtime
+    component: tools
+    lifecycle_phase: creation_registration
     failure_mode: overbroad_scope_manifests_as_authz_denial
     evidence_kind: authz_denied
     url: "http://127.0.0.1:8002/mcp"
@@ -177,8 +179,8 @@ scenarios:
     description: "Approved tool with valid scope, identity, and metadata"
     transport: stdio
     violating: false
-    component: scope
-    lifecycle_phase: runtime
+    component: tools
+    lifecycle_phase: creation_registration
     failure_mode: none
     evidence_kind: clean_execution
     command: python
@@ -192,8 +194,8 @@ scenarios:
     description: "Authorized HTTP call with valid token, complete logs and traces"
     transport: http
     violating: false
-    component: authz
-    lifecycle_phase: runtime
+    component: auth_infra
+    lifecycle_phase: invocation_execution
     failure_mode: none
     evidence_kind: clean_execution
     url: "http://127.0.0.1:8002/mcp"

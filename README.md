@@ -1,6 +1,6 @@
 # MCP Benchmark Stack
 
-A security benchmark for the **Model Context Protocol (MCP)** that tests whether security controls correctly detect and localize violations across six dimensions: scope, identity, metadata, integrity, authorization, and observability.
+A security benchmark for the **Model Context Protocol (MCP)** that tests whether security controls correctly detect and localize violations across three components (Tools, Auth. Infra., Server) and four lifecycle phases (Creation/Registration, Discovery, Invocation/Execution, Update/Maintenance).
 
 Built with the official Python MCP SDK. Produces scored metrics and evidence artifacts for research paper evaluation.
 
@@ -33,18 +33,18 @@ Three scoring modes expose different capabilities:
 
 | ID | Description | Component | Phase | Type |
 |----|-------------|-----------|-------|------|
-| S1 | Read `/etc/passwd` (outside sandbox) | scope | runtime | violating |
-| S2 | Outbound fetch to blocklisted host | scope | runtime | violating |
-| S3 | Tool description with `<script>` injection | metadata | discovery | violating |
-| S4 | Tool hash not in approved set at registration | integrity | admission | violating |
-| S5 | Token with wrong scope reads secrets | authz | runtime | violating |
-| S6 | Blacklisted principal reads secrets | authz | runtime | violating |
-| S7 | Tool definition drifted after approval | integrity | admission | violating |
-| S8 | Real egress denial occurs; server configured not to emit denial trace | observability | observability | violating |
-| S9 | Normal file read (benign) | scope | runtime | benign |
-| S10 | Authorized user reads secret (benign) | authz | runtime | benign |
-| S11 | Integrity drift detected at runtime (divergence: lifecycle_only misses) | integrity | runtime | violating |
-| S12 | Overbroad scope surfaces as authz denial (divergence: component_only misses) | scope | runtime | violating |
+| S1 | Read `/etc/passwd` (outside sandbox) | tools | creation_registration | violating |
+| S2 | Outbound fetch to blocklisted host | tools | invocation_execution | violating |
+| S3 | Tool description with `<script>` injection | tools | discovery | violating |
+| S4 | Tool hash not in approved set at registration | tools | creation_registration | violating |
+| S5 | Token with wrong scope reads secrets | auth_infra | invocation_execution | violating |
+| S6 | Blacklisted principal reads secrets | auth_infra | invocation_execution | violating |
+| S7 | Tool definition drifted after approval | tools | update_maintenance | violating |
+| S8 | Real egress denial; server not configured to emit denial trace | server | update_maintenance | violating |
+| S9 | Normal file read (benign) | tools | creation_registration | benign |
+| S10 | Authorized user reads secret (benign) | auth_infra | invocation_execution | benign |
+| S11 | Integrity drift at runtime (lifecycle_only misses: naive maps HASH_MISMATCH→creation_registration) | tools | update_maintenance | violating |
+| S12 | Overbroad scope as authz denial (component_only misses: naive maps AUTHZ_DENIED→auth_infra) | tools | creation_registration | violating |
 
 S8, S11, and S12 are discriminative: they produce different localization scores across the three modes.
 
@@ -121,13 +121,21 @@ bash scripts/run_benchmark.sh
 |--------|:---------:|:--------------:|:--------------:|
 | Violation Detection Rate | **100%** | 100% | 100% |
 | False Positive Rate | **0%** | 0% | 0% |
-| Localization Accuracy | **100%** | 80% | 80% |
+| Localization Accuracy | **100%** | 50% | 80% |
 | Evidence Completeness | **100%** | 100% | 100% |
 
-The gap on Localization Accuracy is driven by three scenarios where naive single-axis inference diverges from ground truth:
-- **S8**: real egress denial (`POLICY_VIOLATION`) occurs; naive inference maps to `scope/runtime`; true label is `observability/observability` (trace artifact missing). Both baselines miss.
-- **S11**: naive phase inference maps `HASH_MISMATCH → admission`; true phase is `runtime`. lifecycle_only misses.
-- **S12**: naive component inference maps `AUTHZ_DENIED → authz`; true component is `scope`. component_only misses.
+The gap on Localization Accuracy is driven by scenarios where naive single-axis inference diverges from ground truth:
+
+**lifecycle_only misses 5 scenarios** (naive phase inference only):
+- **S1**: `POLICY_VIOLATION` → `invocation_execution`; GT is `creation_registration` (scope configured wrong at creation)
+- **S7**: `HASH_MISMATCH` → `creation_registration`; GT is `update_maintenance` (drift after approval)
+- **S8**: `POLICY_VIOLATION` → `invocation_execution`; GT is `update_maintenance` (observability gap)
+- **S11**: `HASH_MISMATCH` → `creation_registration`; GT is `update_maintenance` (integrity drift at runtime)
+- **S12**: `AUTHZ_DENIED` → `invocation_execution`; GT is `creation_registration` (overbroad scope root cause)
+
+**component_only misses 2 scenarios** (naive component inference only):
+- **S8**: `POLICY_VIOLATION` → `tools`; GT is `server` (observability layer, not tool layer)
+- **S12**: `AUTHZ_DENIED` → `auth_infra`; GT is `tools` (root cause is scope misconfiguration, not auth infrastructure)
 
 ---
 
