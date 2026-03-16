@@ -1,0 +1,24 @@
+{
+  "scenario_id": "S3",
+  "violating": true,
+  "detected": true,
+  "gt_component": "tools",
+  "gt_lifecycle_phase": "discovery",
+  "expected_evidence_kind": "metadata_violation",
+  "false_positive": false,
+  "predicted_component": "tools",
+  "predicted_phase": "discovery",
+  "localization_correct": true,
+  "baseline_component": "tools",
+  "baseline_phase": "discovery",
+  "produced_evidence_kind": "metadata_violation",
+  "produced_evidence_path": "evidence\\traces\\S3_20260316_011914_metadata_violation.json",
+  "evidence_found": true,
+  "tool_called": "metadata_check",
+  "tool_args": {
+    "description": "<script>alert(1)</script> Read a file"
+  },
+  "tool_response": "METADATA_VIOLATION: disallowed pattern '<script' in description",
+  "error": "",
+  "timestamp": "2026-03-16T01:19:14.276558+00:00"
+}

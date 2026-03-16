@@ -1,0 +1,13 @@
+scenario_id,violating,detected,false_positive,gt_component,gt_lifecycle_phase,predicted_component,predicted_phase,localization_correct,baseline_component,baseline_phase,evidence_found,evidence_kind
+S1,True,True,False,tools,creation_registration,tools,creation_registration,True,tools,invocation_execution,True,policy_violation
+S2,True,True,False,tools,invocation_execution,tools,invocation_execution,True,tools,invocation_execution,True,policy_violation
+S3,True,True,False,tools,discovery,tools,discovery,True,tools,discovery,True,metadata_violation
+S4,True,True,False,tools,creation_registration,tools,creation_registration,True,tools,creation_registration,True,hash_mismatch
+S5,True,True,False,auth_infra,invocation_execution,auth_infra,invocation_execution,True,auth_infra,invocation_execution,True,authz_denied
+S6,True,True,False,auth_infra,invocation_execution,auth_infra,invocation_execution,True,auth_infra,invocation_execution,True,authz_denied
+S7,True,True,False,tools,update_maintenance,tools,update_maintenance,True,tools,creation_registration,True,hash_mismatch
+S8,True,True,False,server,update_maintenance,server,update_maintenance,True,tools,invocation_execution,True,observability_gap
+S11,True,True,False,tools,update_maintenance,tools,update_maintenance,True,tools,creation_registration,True,hash_mismatch
+S12,True,True,False,tools,creation_registration,tools,creation_registration,True,auth_infra,invocation_execution,True,authz_denied
+S9,False,False,False,tools,creation_registration,,,False,,,False,clean_execution
+S10,False,False,False,auth_infra,invocation_execution,,,False,,,False,clean_execution

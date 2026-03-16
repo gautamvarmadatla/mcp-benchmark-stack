@@ -1,0 +1,10 @@
+{
+  "scenario_id": "S12",
+  "kind": "policy_violation",
+  "timestamp": "20260316_011916",
+  "response": "AUTHZ_DENIED: scope 'read:secrets' required, principal 'user2' has [read:metrics]",
+  "tool": "get_secret",
+  "tool_args": {
+    "key": "api_key"
+  }
+}

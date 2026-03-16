@@ -1,8 +1,0 @@
-{
-  "scenario_id": "S4",
-  "kind": "hash_mismatch",
-  "timestamp": "20260315_224516",
-  "response": "HASH_MISMATCH: expected=WRONG_HASH_AAAA1111 actual=b36370a474ddd8d7c8d2304d41e4f33720c42db8a7b8ba0849655fe1f7479f13",
-  "expected_hash": "WRONG_HASH_AAAA1111",
-  "actual_hash": "b36370a474ddd8d7c8d2304d41e4f33720c42db8a7b8ba0849655fe1f7479f13"
-}

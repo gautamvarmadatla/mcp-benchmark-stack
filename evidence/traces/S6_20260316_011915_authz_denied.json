@@ -1,0 +1,10 @@
+{
+  "scenario_id": "S6",
+  "kind": "authz_denied",
+  "timestamp": "20260316_011915",
+  "error": "HTTPStatusError: Client error '403 Forbidden' for url 'http://127.0.0.1:8002/mcp'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+  "tool": "get_secret",
+  "tool_args": {
+    "key": "api_key"
+  }
+}
