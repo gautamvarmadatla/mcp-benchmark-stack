@@ -46,7 +46,7 @@ Three scoring modes expose different capabilities:
 | S11 | Integrity drift detected at runtime (divergence: lifecycle_only misses) | integrity | runtime | violating |
 | S12 | Overbroad scope surfaces as authz denial (divergence: component_only misses) | scope | runtime | violating |
 
-S11 and S12 are discriminative: they produce different localization scores across the three modes.
+S8, S11, and S12 are discriminative: they produce different localization scores across the three modes.
 
 ---
 
@@ -91,13 +91,16 @@ pytest tests/test_benchmark.py -v -k "not integration"
 ### Full benchmark
 
 ```bash
-# Terminal 1
-python servers/fetch_http_server/server.py
+# Terminal 1 — fetch server with tracing enabled (S1, S2)
+EMIT_DENIAL_TRACE=1 TRACE_DIR=evidence/server_traces python servers/fetch_http_server/server.py
 
-# Terminal 2
+# Terminal 2 — auth server (S5, S6, S10, S12)
 python servers/auth_http_server/server.py
 
-# Terminal 3
+# Terminal 3 — fetch server with tracing disabled (S8 only)
+EMIT_DENIAL_TRACE=0 TRACE_DIR=evidence/server_traces_s8 FETCH_SERVER_PORT=8003 python servers/fetch_http_server/server.py
+
+# Terminal 4
 pytest tests/test_benchmark.py -v
 
 # Or use the entry point directly:
@@ -131,14 +134,16 @@ The gap on Localization Accuracy is driven by three scenarios where naive single
 ## Output Files
 
 ```
-evidence/results/metrics_*.json          # per-mode scores
+evidence/results/metrics_*.json              # per-mode scores
 evidence/results/baseline_comparison_*.json  # all three modes side by side
-evidence/results/scenario_outcomes_*.csv # per-scenario: gt, baseline preds, dual preds
-evidence/results/results_*.csv           # full detail rows
-evidence/results/summary_table_*.md      # paper-ready markdown table
-evidence/results/summary_table_*.tex     # paper-ready LaTeX table
-evidence/logs/S*_*.json                  # per-scenario evidence logs
-evidence/traces/S*_*.json                # per-scenario trace artifacts
+evidence/results/scenario_outcomes_*.csv     # per-scenario: gt, baseline preds, dual preds
+evidence/results/results_*.csv               # full detail rows
+evidence/results/summary_table_*.md          # paper-ready markdown table
+evidence/results/summary_table_*.tex         # paper-ready LaTeX table
+evidence/logs/S*_*.json                      # per-scenario evidence logs
+evidence/traces/S*_*.json                    # per-scenario trace artifacts
+evidence/server_traces/*.json                # server-emitted denial traces (:8001)
+evidence/server_traces_s8/                   # intentionally empty for S8 (tracing disabled)
 ```
 
 ---
