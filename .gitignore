@@ -7,3 +7,10 @@ __pycache__/
 dist/
 build/
 .pytest_cache/
+
+# Transient server stdout/stderr captured during a run
+evidence/logs/*.err
+evidence/logs/*.out
+# Server-side runtime trace dirs (regenerated each run; not canonical evidence)
+evidence/server_traces/
+evidence/server_traces_s8/

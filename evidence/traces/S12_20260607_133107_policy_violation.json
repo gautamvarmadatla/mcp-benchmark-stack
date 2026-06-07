@@ -1,0 +1,10 @@
+{
+  "scenario_id": "S12",
+  "kind": "policy_violation",
+  "timestamp": "20260607_133107",
+  "response": "{\"error\": \"AUTHZ_DENIED\", \"tool\": \"read_metric\", \"required_scope\": \"read:secrets\", \"granted_scope\": [\"read:metrics\"], \"tool_scope_overbroad\": true, \"principal\": \"user2\"}",
+  "tool": "read_metric",
+  "tool_args": {
+    "name": "request_latency"
+  }
+}

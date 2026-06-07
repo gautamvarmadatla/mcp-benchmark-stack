@@ -1,0 +1,10 @@
+{
+  "scenario_id": "S5",
+  "kind": "policy_violation",
+  "timestamp": "20260607_133105",
+  "response": "{\"error\": \"AUTHZ_DENIED\", \"tool\": \"get_secret\", \"required_scope\": \"read:secrets\", \"granted_scope\": [\"read:metrics\"], \"tool_scope_overbroad\": false, \"principal\": \"user2\"}",
+  "tool": "get_secret",
+  "tool_args": {
+    "key": "db_password"
+  }
+}

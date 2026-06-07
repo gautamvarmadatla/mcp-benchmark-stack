@@ -12,11 +12,11 @@
   "baseline_component": "auth_infra",
   "baseline_phase": "invocation_execution",
   "produced_evidence_kind": "",
-  "produced_evidence_path": "evidence\\traces\\S6_20260316_011915_authz_denied.json",
+  "produced_evidence_path": "evidence\\traces\\S6_20260607_133105_authz_denied.json",
   "evidence_found": true,
   "tool_called": "",
   "tool_args": {},
   "tool_response": "",
   "error": "HTTPStatusError: Client error '403 Forbidden' for url 'http://127.0.0.1:8002/mcp'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
-  "timestamp": "2026-03-16T01:19:15.292172+00:00"
+  "timestamp": "2026-06-07T13:31:05.768928+00:00"
 }

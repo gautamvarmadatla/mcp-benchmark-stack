@@ -12,13 +12,13 @@
   "baseline_component": "auth_infra",
   "baseline_phase": "invocation_execution",
   "produced_evidence_kind": "policy_violation",
-  "produced_evidence_path": "evidence\\traces\\S12_20260316_011916_policy_violation.json",
+  "produced_evidence_path": "evidence\\traces\\S12_20260607_133107_policy_violation.json",
   "evidence_found": true,
-  "tool_called": "get_secret",
+  "tool_called": "read_metric",
   "tool_args": {
-    "key": "api_key"
+    "name": "request_latency"
   },
-  "tool_response": "AUTHZ_DENIED: scope 'read:secrets' required, principal 'user2' has [read:metrics]",
+  "tool_response": "{\"error\": \"AUTHZ_DENIED\", \"tool\": \"read_metric\", \"required_scope\": \"read:secrets\", \"granted_scope\": [\"read:metrics\"], \"tool_scope_overbroad\": true, \"principal\": \"user2\"}",
   "error": "",
-  "timestamp": "2026-03-16T01:19:16.887286+00:00"
+  "timestamp": "2026-06-07T13:31:07.159871+00:00"
 }
