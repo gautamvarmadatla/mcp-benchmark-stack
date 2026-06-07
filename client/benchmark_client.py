@@ -91,12 +91,6 @@ def _infer_phase(text: str, tool_called: str) -> str:
 
 
 def _parse_signals(text: str) -> dict:
-    """Extract real, server-emitted localization signals from a response/error.
-
-    These are facts the server reports about *why* a request failed — the denial origin,
-    whether a tool's required scope is overbroad — not taxonomy annotations. The naive
-    baselines ignore them entirely; only dual_axis reads them.
-    """
     sig = {}
     if "origin=scope_config" in text:
         sig["origin"] = "scope_config"
@@ -111,27 +105,25 @@ def _parse_signals(text: str) -> dict:
 def _infer_component_dual(text: str, signals: dict = None) -> str:
     signals = signals or {}
     if signals.get("tool_scope_overbroad"):
-        return "tools"                # tool's own scope config is the root cause
+        return "tools"
     if signals.get("observability_gap"):
-        return "server"               # missing-trace gap lives in the server layer
+        return "server"
     return _infer_component(text)
 
 
 def _infer_phase_dual(text: str, tool_called: str, signals: dict = None) -> str:
     signals = signals or {}
-    # A missing-trace gap is the root cause even when a real denial (with its own origin)
-    # also fired, so it must win over the origin-based rules below.
     if signals.get("observability_gap"):
         return "update_maintenance"
     origin = signals.get("origin")
     if origin == "scope_config":
-        return "creation_registration"   # denial rooted in a config-time scope boundary
+        return "creation_registration"
     if origin == "egress":
-        return "invocation_execution"    # runtime egress decision
+        return "invocation_execution"
     if signals.get("tool_scope_overbroad"):
-        return "creation_registration"   # overbroad requirement was set at registration
-    if signals.get("integrity_approved") and signals.get("integrity_mismatch"):
-        return "update_maintenance"      # drift against an existing approval baseline
+        return "creation_registration"
+    if signals.get("integrity_drift"):
+        return "update_maintenance"
     return _infer_phase(text, tool_called)
 
 
@@ -253,45 +245,51 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
                 elif "integrity_check" in scenario:
                     from pydantic import AnyUrl
                     ic = scenario["integrity_check"]
+                    mode = ic.get("mode", "admission")
                     expected_hash = ic.get("expected_hash", "")
                     resource_uri_str = ic.get("resource_uri", "tool-integrity://hash")
-                    resource_result = await session.read_resource(AnyUrl(resource_uri_str))
-                    raw = ""
-                    for content in resource_result.contents:
-                        if hasattr(content, "text"):
-                            raw = content.text.strip()
-                    # Server returns a structured integrity report; fall back to a bare hash.
-                    try:
-                        report = json.loads(raw)
-                    except Exception:
-                        report = {"current_hash": raw, "registered_hash": None, "approved": False}
-                    current_hash = report.get("current_hash", raw)
-                    registered_hash = report.get("registered_hash")
-                    approved = bool(report.get("approved"))
-                    if approved:
-                        # Post-approval: a real drift is current != the registered baseline.
-                        mismatch = (current_hash != registered_hash)
-                        reference = registered_hash
+
+                    async def _read_report():
+                        res = await session.read_resource(AnyUrl(resource_uri_str))
+                        raw = ""
+                        for content in res.contents:
+                            if hasattr(content, "text"):
+                                raw = content.text.strip()
+                        try:
+                            return json.loads(raw)
+                        except Exception:
+                            return {"current_hash": raw}
+
+                    rep = await _read_report()
+                    current_hash = rep.get("current_hash", "")
+                    if mode == "runtime":
+                        snapshot = current_hash
+                        current_hash = (await _read_report()).get("current_hash", "")
+                        reference = snapshot
+                        mismatch = current_hash != snapshot
+                    elif mode == "baseline":
+                        reference = rep.get("registered_hash")
+                        mismatch = current_hash != reference
                     else:
-                        # Admission: not yet approved — compare against the approved-set entry.
-                        mismatch = (current_hash != expected_hash)
                         reference = expected_hash
+                        mismatch = current_hash != expected_hash
+                    drift = mismatch and mode in ("baseline", "runtime")
                     if mismatch:
-                        response_text = f"HASH_MISMATCH: current={current_hash} reference={reference} approved={approved}"
+                        response_text = f"HASH_MISMATCH: current={current_hash} reference={reference} mode={mode}"
                     else:
                         response_text = f"hash_ok: {current_hash}"
                     log.info(f"[{sid}] integrity: {response_text}")
                     detected, fp = _score_response(response_text, "", expected_violation)
                     baseline_component = _infer_component(response_text)
                     baseline_phase = _infer_phase(response_text, "integrity_check")
-                    signals = {"integrity_approved": approved, "integrity_mismatch": mismatch}
+                    signals = {"integrity_drift": drift}
                     predicted_component = _infer_component_dual(response_text, signals)
                     predicted_phase = _infer_phase_dual(response_text, "integrity_check", signals)
                     localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
                     produced_evidence_path = ""
                     evidence_found = False
                     if detected:
-                        trace_file = _write_trace(sid, "hash_mismatch", {"response": response_text, "reference_hash": reference, "current_hash": current_hash, "approved": approved})
+                        trace_file = _write_trace(sid, "hash_mismatch", {"response": response_text, "reference_hash": reference, "current_hash": current_hash, "mode": mode})
                         produced_evidence_path = str(trace_file)
                         evidence_found = True
                     good_br = BenchmarkResult(

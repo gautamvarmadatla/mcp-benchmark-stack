@@ -25,22 +25,24 @@ Three scoring modes expose different capabilities:
 | `lifecycle_only` | Naive phase inference from response text only |
 | `component_only` | Naive component inference from response text only |
 
-> **Note:** `dual_axis` localizes from **real signals the servers emit at runtime** — not from any annotation in the scenario file. `lifecycle_only` and `component_only` use purely naive keyword-based inference from response text. The comparison evaluates whether consuming the richer signals a well-instrumented server already produces improves localization over text-only heuristics.
+> **Note:** `dual_axis` localizes from structured signals the servers emit at runtime; `lifecycle_only` and `component_only` use naive keyword-based inference from response text. The comparison evaluates whether consuming the richer signals a well-instrumented server already produces improves localization over text-only heuristics.
 
 ---
 
-## How localization is earned
+## How localization works
 
-The earlier version of this benchmark let `dual_axis` read a `failure_mode` label baked into `scenarios.yaml`, which effectively encoded the answer. That has been removed. `dual_axis` now derives component and phase **only** from structured signals the servers genuinely produce:
+`dual_axis` derives component and phase from structured signals the servers emit:
 
 | Signal | Emitted by | Lets the localizer distinguish |
 |--------|-----------|-------------------------------|
 | `origin=scope_config` vs `origin=egress` on a `POLICY_VIOLATION` | file / fetch servers | a creation-time scope-config denial (S1) from a runtime egress denial (S2) |
-| integrity report `{approved, match}` on `tool-integrity://hash` | file server | admission of an unapproved tool (S4, `approved=false`) from post-approval drift (S7/S11, `approved=true, match=false`) |
-| `tool_scope_overbroad` in the structured `AUTHZ_DENIED` body | auth server | a tool whose own required scope is misconfigured (S12) from a genuinely under-scoped token / principal (S5, S6) |
+| integrity report `{current_hash, registered_hash, approved}` on `tool-integrity://hash`, checked in `admission` / `baseline` / `runtime` modes | file server | admission of an unapproved hash (S4), drift from the approved baseline (S7), and in-session mutation caught by re-verifying the live hash against the session-start snapshot (S11) |
+| `tool_scope_overbroad` in the structured `AUTHZ_DENIED` body | auth server | a tool whose own required scope is misconfigured (S12) from an under-scoped token / principal (S5, S6) |
 | missing server-side denial trace | fetch server (`EMIT_DENIAL_TRACE=0`) | an observability gap in the server layer (S8) |
 
-The naive baselines never read these fields — they key only off the response keywords (`HASH_MISMATCH`, `AUTHZ_DENIED`, `POLICY_VIOLATION`). The `failure_mode` field remains in `scenarios.yaml` as human-readable documentation but is **never consumed by the scorer**.
+The naive baselines never read these fields — they key only off the response keywords (`HASH_MISMATCH`, `AUTHZ_DENIED`, `POLICY_VIOLATION`).
+
+The three integrity scenarios use different checks: S4 admission (hash not in the approved set), S7 drift from the approval baseline, S11 runtime re-verification (live hash vs the session-start snapshot).
 
 ---
 
@@ -58,8 +60,8 @@ The naive baselines never read these fields — they key only off the response k
 | S8 | Real egress denial; server not configured to emit denial trace | server | update_maintenance | violating |
 | S9 | Normal file read (benign) | tools | creation_registration | benign |
 | S10 | Authorized user reads secret (benign) | auth_infra | invocation_execution | benign |
-| S11 | Integrity drift at runtime (lifecycle_only misses: naive maps HASH_MISMATCH→creation_registration) | tools | update_maintenance | violating |
-| S12 | Overbroad scope as authz denial (component_only misses: naive maps AUTHZ_DENIED→auth_infra) | tools | creation_registration | violating |
+| S11 | Runtime integrity drift: tool mutated mid-session (lifecycle_only misses: naive maps HASH_MISMATCH→creation_registration) | tools | update_maintenance | violating |
+| S12 | Overbroad-scoped tool denied (component_only misses: naive maps AUTHZ_DENIED→auth_infra) | tools | creation_registration | violating |
 
 S8, S11, and S12 are discriminative: they produce different localization scores across the three modes.
 
@@ -145,7 +147,7 @@ The gap on Localization Accuracy is driven by scenarios where naive single-axis 
 - **S1**: `POLICY_VIOLATION` → `invocation_execution`; GT is `creation_registration` (scope configured wrong at creation)
 - **S7**: `HASH_MISMATCH` → `creation_registration`; GT is `update_maintenance` (drift after approval)
 - **S8**: `POLICY_VIOLATION` → `invocation_execution`; GT is `update_maintenance` (observability gap)
-- **S11**: `HASH_MISMATCH` → `creation_registration`; GT is `update_maintenance` (integrity drift at runtime)
+- **S11**: `HASH_MISMATCH` → `creation_registration`; GT is `update_maintenance` (tool mutated mid-session)
 - **S12**: `AUTHZ_DENIED` → `invocation_execution`; GT is `creation_registration` (overbroad scope root cause)
 
 **component_only misses 2 scenarios** (naive component inference only):
@@ -173,7 +175,7 @@ evidence/server_traces_s8/                   # intentionally empty for S8 (traci
 
 ## Limitations
 
-- `dual_axis` localization is **signal-based**: it consumes structured fields the servers emit at runtime (denial origin, integrity approval baseline, overbroad-scope flag, missing-trace gap) and infers the root-cause component/phase from them. It does **not** read the `failure_mode` annotation. The single-axis baselines (`lifecycle_only`, `component_only`) use only naive keyword inference from response text, which is why they mislocalize the cases where the keyword and the root cause diverge (S1, S7, S8, S11, S12). The remaining limitation is that the servers here are curated to emit clean signals; a real server may emit noisier or absent signals, which would lower dual_axis accuracy.
+- `dual_axis` localization is **signal-based**: it consumes structured fields the servers emit at runtime (denial origin, integrity report, overbroad-scope flag, missing-trace gap) and infers the root-cause component/phase from them. The single-axis baselines (`lifecycle_only`, `component_only`) use only naive keyword inference from response text, which is why they mislocalize the cases where the keyword and the root cause diverge (S1, S7, S8, S11, S12). The servers here are curated to emit clean signals; a real server may emit noisier or absent signals, which would lower dual_axis accuracy.
 - **S8** runs against a second fetch server instance (port 8003) started with `EMIT_DENIAL_TRACE=0`. The egress denial is real and generated by the server. The benchmark then checks whether the expected denial-trace artifact is present in the server trace directory. The observability-gap finding is assigned only when a real denial occurs without the required trace evidence — not by rewriting the runtime response.
 - Evidence completeness requires a valid JSON artifact file on disk with `scenario_id`, `kind`, and `timestamp` fields. S6 (blacklisted principal) is detected via HTTP 403 at the transport layer before tool execution; the client writes an `authz_denied` trace artifact from the exception path to preserve completeness.
 

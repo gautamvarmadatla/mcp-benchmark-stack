@@ -12,7 +12,7 @@
   "baseline_component": "tools",
   "baseline_phase": "invocation_execution",
   "produced_evidence_kind": "policy_violation",
-  "produced_evidence_path": "evidence\\traces\\S2_20260607_133104_policy_violation.json",
+  "produced_evidence_path": "evidence\\traces\\S2_20260607_135138_policy_violation.json",
   "evidence_found": true,
   "tool_called": "fetch_url",
   "tool_args": {
@@ -20,5 +20,5 @@
   },
   "tool_response": "POLICY_VIOLATION: host 'evil.example.org' not in egress allowlist {'example.com', 'httpbin.org'} (origin=egress)",
   "error": "",
-  "timestamp": "2026-06-07T13:31:04.449953+00:00"
+  "timestamp": "2026-06-07T13:51:38.702669+00:00"
 }

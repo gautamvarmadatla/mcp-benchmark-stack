@@ -20,16 +20,11 @@ TOKEN_TABLE = {
 }
 BLACKLISTED_PRINCIPALS = {"banned_user"}
 
-# Scope a tool *requires* to run. read_metric is deliberately misconfigured: a metric read
-# only needs read:metrics, but it was registered demanding read:secrets. A denial here is
-# rooted in the tool's own (creation-time) scope configuration, not in the auth infra.
 TOOL_REQUIRED_SCOPE = {
     "get_secret": "read:secrets",
     "admin_action": "admin",
     "read_metric": "read:secrets",
 }
-# Tools whose required scope is broader than their function warrants. The server reports this
-# fact on every denial so the client can localize the root cause to the tool, not the token.
 OVERBROAD_TOOL_SCOPES = {"read_metric"}
 
 _current_token: ContextVar[dict] = ContextVar("current_token", default={})
@@ -63,8 +58,6 @@ def _check_scope(tool_name: str) -> str | None:
     info = _current_token.get()
     required = TOOL_REQUIRED_SCOPE[tool_name]
     if required not in info.get("scope", "").split():
-        # Structured denial: tool_scope_overbroad is the real signal that lets the client
-        # attribute the root cause to the tool's config rather than the auth infrastructure.
         denial = {
             "error": "AUTHZ_DENIED",
             "tool": tool_name,

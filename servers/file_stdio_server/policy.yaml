@@ -7,10 +7,7 @@ policy:
   tool_drift_detection: true
   log_target: stderr
 signals:
-  # Scope denials are tagged origin=scope_config (rooted in a creation-time boundary).
   denial_origin: scope_config
-  # tool-integrity://hash returns {current_hash, registered_hash, approved, match}.
-  # approved=true + match=false is genuine post-approval drift (update_maintenance);
-  # approved=false is an admission-time check (creation_registration).
   integrity_report: "current_hash, registered_hash, approved, match"
   registered_hash_env: REGISTERED_TOOL_HASH
+  runtime_mutate_env: RUNTIME_MUTATE

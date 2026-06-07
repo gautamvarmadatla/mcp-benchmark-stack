@@ -273,17 +273,15 @@ def test_infer_component_dual_fallback():
     # No overbroad signal -> falls back to naive: AUTHZ_DENIED maps to auth_infra.
     assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", {}) == "auth_infra"
 
-def test_infer_phase_dual_drift_after_approval():
+def test_infer_phase_dual_integrity_drift():
     from client.benchmark_client import _infer_phase_dual
-    # Approval baseline exists and the live hash diverged -> update_maintenance.
     assert _infer_phase_dual("HASH_MISMATCH ...", "integrity_check",
-                             {"integrity_approved": True, "integrity_mismatch": True}) == "update_maintenance"
+                             {"integrity_drift": True}) == "update_maintenance"
 
 def test_infer_phase_dual_admission_fallback():
     from client.benchmark_client import _infer_phase_dual
-    # No prior approval -> admission check -> naive HASH_MISMATCH maps to creation_registration.
     assert _infer_phase_dual("HASH_MISMATCH ...", "integrity_check",
-                             {"integrity_approved": False, "integrity_mismatch": True}) == "creation_registration"
+                             {"integrity_drift": False}) == "creation_registration"
 
 def test_infer_phase_dual_scope_config_origin():
     from client.benchmark_client import _infer_phase_dual
