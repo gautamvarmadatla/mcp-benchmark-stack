@@ -605,7 +605,7 @@ def export_results(results: list[BenchmarkResult], metrics_dual: dict, metrics_l
         f"| Evidence Completeness | {_pct(dual_m.get('evidence_completeness', 0))} | {_pct(lc_m.get('evidence_completeness', 0))} | {_pct(co_m.get('evidence_completeness', 0))} |",
         f"| Localized / Detected | {_frac(dual_m, 'localized', 'detected')} | {_frac(lc_m, 'localized', 'detected')} | {_frac(co_m, 'localized', 'detected')} |",
         "",
-        "> dual_axis localizes from real server-emitted signals (denial origin, approval baseline, overbroad-scope flag).",
+        "> dual_axis localizes from real server-emitted signals (denial origin, integrity report, overbroad-scope flag).",
         "> lifecycle_only and component_only use naive keyword inference from response text only.",
     ]
     md_table_path.write_text("\n".join(md_lines))
@@ -625,7 +625,7 @@ def export_results(results: list[BenchmarkResult], metrics_dual: dict, metrics_l
         f"Localized / Detected & {_frac(dual_m, 'localized', 'detected')} & {_frac(lc_m, 'localized', 'detected')} & {_frac(co_m, 'localized', 'detected')} \\\\",
         r"\hline",
         r"\end{tabular}",
-        r"\caption{MCP Benchmark Results. dual\_axis localizes from real server-emitted signals (denial origin, approval baseline, overbroad-scope flag); baselines use naive keyword inference from response text.}",
+        r"\caption{MCP Benchmark Results. dual\_axis localizes from real server-emitted signals (denial origin, integrity report, overbroad-scope flag); baselines use naive keyword inference from response text.}",
         r"\label{tab:benchmark}",
         r"\end{table}",
     ]

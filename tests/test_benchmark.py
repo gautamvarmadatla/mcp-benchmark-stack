@@ -265,12 +265,10 @@ def test_infer_phase_authz_denied():
 
 def test_infer_component_dual_overbroad_scope():
     from client.benchmark_client import _infer_component_dual
-    # Earned from the server's overbroad-scope signal, not a scenario annotation.
     assert _infer_component_dual("AUTHZ_DENIED ...", {"tool_scope_overbroad": True}) == "tools"
 
 def test_infer_component_dual_fallback():
     from client.benchmark_client import _infer_component_dual
-    # No overbroad signal -> falls back to naive: AUTHZ_DENIED maps to auth_infra.
     assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", {}) == "auth_infra"
 
 def test_infer_phase_dual_integrity_drift():
