@@ -90,23 +90,48 @@ def _infer_phase(text: str, tool_called: str) -> str:
     return ""
 
 
-def _infer_component_dual(text: str, failure_mode: str = "") -> str:
-    if "overbroad_scope" in failure_mode or "over_broad" in failure_mode:
-        return "tools"
-    if "missing_server_trace" in failure_mode:
-        return "server"
+def _parse_signals(text: str) -> dict:
+    """Extract real, server-emitted localization signals from a response/error.
+
+    These are facts the server reports about *why* a request failed — the denial origin,
+    whether a tool's required scope is overbroad — not taxonomy annotations. The naive
+    baselines ignore them entirely; only dual_axis reads them.
+    """
+    sig = {}
+    if "origin=scope_config" in text:
+        sig["origin"] = "scope_config"
+    elif "origin=egress" in text:
+        sig["origin"] = "egress"
+    if "tool_scope_overbroad" in text:
+        sig["tool_scope_overbroad"] = ('"tool_scope_overbroad": true' in text
+                                       or '"tool_scope_overbroad":true' in text)
+    return sig
+
+
+def _infer_component_dual(text: str, signals: dict = None) -> str:
+    signals = signals or {}
+    if signals.get("tool_scope_overbroad"):
+        return "tools"                # tool's own scope config is the root cause
+    if signals.get("observability_gap"):
+        return "server"               # missing-trace gap lives in the server layer
     return _infer_component(text)
 
 
-def _infer_phase_dual(text: str, tool_called: str, failure_mode: str = "") -> str:
-    if "over_broad" in failure_mode or "overbroad_scope" in failure_mode:
-        return "creation_registration"
-    if "integrity_drift" in failure_mode or "drifted_after" in failure_mode:
+def _infer_phase_dual(text: str, tool_called: str, signals: dict = None) -> str:
+    signals = signals or {}
+    # A missing-trace gap is the root cause even when a real denial (with its own origin)
+    # also fired, so it must win over the origin-based rules below.
+    if signals.get("observability_gap"):
         return "update_maintenance"
-    if "missing_server_trace" in failure_mode:
-        return "update_maintenance"
-    if "at_runtime" in failure_mode:
-        return "invocation_execution"
+    origin = signals.get("origin")
+    if origin == "scope_config":
+        return "creation_registration"   # denial rooted in a config-time scope boundary
+    if origin == "egress":
+        return "invocation_execution"    # runtime egress decision
+    if signals.get("tool_scope_overbroad"):
+        return "creation_registration"   # overbroad requirement was set at registration
+    if signals.get("integrity_approved") and signals.get("integrity_mismatch"):
+        return "update_maintenance"      # drift against an existing approval baseline
     return _infer_phase(text, tool_called)
 
 
@@ -182,7 +207,6 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
     gt_component = scenario["component"]
     gt_lifecycle_phase = scenario["lifecycle_phase"]
     expected_evidence_kind = scenario["evidence_kind"]
-    failure_mode = scenario.get("failure_mode", "")
 
     log.info(f"[{sid}] stdio: {tool_name}({tool_args})")
 
@@ -200,8 +224,8 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
                     detected, fp = _score_response(response_text, "", expected_violation)
                     baseline_component = _infer_component(response_text)
                     baseline_phase = _infer_phase(response_text, "metadata_check")
-                    predicted_component = _infer_component_dual(response_text, failure_mode)
-                    predicted_phase = _infer_phase_dual(response_text, "metadata_check", failure_mode)
+                    predicted_component = _infer_component_dual(response_text, {})
+                    predicted_phase = _infer_phase_dual(response_text, "metadata_check", {})
                     localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
                     produced_evidence_path = ""
                     evidence_found = False
@@ -232,25 +256,42 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
                     expected_hash = ic.get("expected_hash", "")
                     resource_uri_str = ic.get("resource_uri", "tool-integrity://hash")
                     resource_result = await session.read_resource(AnyUrl(resource_uri_str))
-                    actual_hash = ""
+                    raw = ""
                     for content in resource_result.contents:
                         if hasattr(content, "text"):
-                            actual_hash = content.text.strip()
-                    if actual_hash != expected_hash:
-                        response_text = f"HASH_MISMATCH: expected={expected_hash} actual={actual_hash}"
+                            raw = content.text.strip()
+                    # Server returns a structured integrity report; fall back to a bare hash.
+                    try:
+                        report = json.loads(raw)
+                    except Exception:
+                        report = {"current_hash": raw, "registered_hash": None, "approved": False}
+                    current_hash = report.get("current_hash", raw)
+                    registered_hash = report.get("registered_hash")
+                    approved = bool(report.get("approved"))
+                    if approved:
+                        # Post-approval: a real drift is current != the registered baseline.
+                        mismatch = (current_hash != registered_hash)
+                        reference = registered_hash
                     else:
-                        response_text = f"hash_ok: {actual_hash}"
+                        # Admission: not yet approved — compare against the approved-set entry.
+                        mismatch = (current_hash != expected_hash)
+                        reference = expected_hash
+                    if mismatch:
+                        response_text = f"HASH_MISMATCH: current={current_hash} reference={reference} approved={approved}"
+                    else:
+                        response_text = f"hash_ok: {current_hash}"
                     log.info(f"[{sid}] integrity: {response_text}")
                     detected, fp = _score_response(response_text, "", expected_violation)
                     baseline_component = _infer_component(response_text)
                     baseline_phase = _infer_phase(response_text, "integrity_check")
-                    predicted_component = _infer_component_dual(response_text, failure_mode)
-                    predicted_phase = _infer_phase_dual(response_text, "integrity_check", failure_mode)
+                    signals = {"integrity_approved": approved, "integrity_mismatch": mismatch}
+                    predicted_component = _infer_component_dual(response_text, signals)
+                    predicted_phase = _infer_phase_dual(response_text, "integrity_check", signals)
                     localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
                     produced_evidence_path = ""
                     evidence_found = False
                     if detected:
-                        trace_file = _write_trace(sid, "hash_mismatch", {"response": response_text, "expected_hash": expected_hash, "actual_hash": actual_hash})
+                        trace_file = _write_trace(sid, "hash_mismatch", {"response": response_text, "reference_hash": reference, "current_hash": current_hash, "approved": approved})
                         produced_evidence_path = str(trace_file)
                         evidence_found = True
                     good_br = BenchmarkResult(
@@ -277,8 +318,9 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
                     detected, fp = _score_response(response_text, "", expected_violation)
                     baseline_component = _infer_component(response_text)
                     baseline_phase = _infer_phase(response_text, tool_name)
-                    predicted_component = _infer_component_dual(response_text, failure_mode)
-                    predicted_phase = _infer_phase_dual(response_text, tool_name, failure_mode)
+                    signals = _parse_signals(response_text)
+                    predicted_component = _infer_component_dual(response_text, signals)
+                    predicted_phase = _infer_phase_dual(response_text, tool_name, signals)
                     localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
                     produced_evidence_path = ""
                     evidence_found = False
@@ -310,8 +352,9 @@ async def run_stdio_scenario(scenario: dict) -> BenchmarkResult:
         detected, fp = _score_response("", err_str, expected_violation)
         baseline_component = _infer_component(err_str)
         baseline_phase = _infer_phase(err_str, "")
-        predicted_component = _infer_component_dual(err_str, failure_mode)
-        predicted_phase = _infer_phase_dual(err_str, "", failure_mode)
+        signals = _parse_signals(err_str)
+        predicted_component = _infer_component_dual(err_str, signals)
+        predicted_phase = _infer_phase_dual(err_str, "", signals)
         localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
         br = BenchmarkResult(
             sid, expected_violation, detected,
@@ -344,7 +387,6 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
     expected_evidence_kind = scenario["evidence_kind"]
     headers = scenario.get("headers", {})
     observability_check = scenario.get("observability_check", False)
-    failure_mode = scenario.get("failure_mode", "")
 
     log.info(f"[{sid}] http: {url} {tool_name}({tool_args})")
 
@@ -372,12 +414,11 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
                     else:
                         log.info(f"[{sid}] server trace found: {server_trace}")
 
+                signals = _parse_signals(response_text)
                 if observability_gap:
-                    predicted_component = "server"
-                    predicted_phase = "update_maintenance"
-                else:
-                    predicted_component = _infer_component_dual(response_text, failure_mode)
-                    predicted_phase = _infer_phase_dual(response_text, tool_name, failure_mode)
+                    signals["observability_gap"] = True
+                predicted_component = _infer_component_dual(response_text, signals)
+                predicted_phase = _infer_phase_dual(response_text, tool_name, signals)
                 localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
                 produced_evidence_path = ""
                 evidence_found = False
@@ -421,12 +462,11 @@ async def run_http_scenario(scenario: dict) -> BenchmarkResult:
             server_trace = _find_server_trace(server_trace_dir, "policy_violation")
             observability_gap = (server_trace == "")
 
+        signals = _parse_signals(err_str)
         if observability_gap:
-            predicted_component = "observability"
-            predicted_phase = "observability"
-        else:
-            predicted_component = _infer_component_dual(err_str, failure_mode)
-            predicted_phase = _infer_phase_dual(err_str, tool_name, failure_mode)
+            signals["observability_gap"] = True
+        predicted_component = _infer_component_dual(err_str, signals)
+        predicted_phase = _infer_phase_dual(err_str, tool_name, signals)
         localization_correct = (predicted_component == gt_component and predicted_phase == gt_lifecycle_phase)
         produced_evidence_path = ""
         evidence_found = False
@@ -567,8 +607,8 @@ def export_results(results: list[BenchmarkResult], metrics_dual: dict, metrics_l
         f"| Evidence Completeness | {_pct(dual_m.get('evidence_completeness', 0))} | {_pct(lc_m.get('evidence_completeness', 0))} | {_pct(co_m.get('evidence_completeness', 0))} |",
         f"| Localized / Detected | {_frac(dual_m, 'localized', 'detected')} | {_frac(lc_m, 'localized', 'detected')} | {_frac(co_m, 'localized', 'detected')} |",
         "",
-        "> dual_axis uses taxonomy-assisted root-cause localization with failure_mode annotations.",
-        "> lifecycle_only and component_only use naive signal-based inference from response text only.",
+        "> dual_axis localizes from real server-emitted signals (denial origin, approval baseline, overbroad-scope flag).",
+        "> lifecycle_only and component_only use naive keyword inference from response text only.",
     ]
     md_table_path.write_text("\n".join(md_lines))
 
@@ -587,7 +627,7 @@ def export_results(results: list[BenchmarkResult], metrics_dual: dict, metrics_l
         f"Localized / Detected & {_frac(dual_m, 'localized', 'detected')} & {_frac(lc_m, 'localized', 'detected')} & {_frac(co_m, 'localized', 'detected')} \\\\",
         r"\hline",
         r"\end{tabular}",
-        r"\caption{MCP Benchmark Results. dual\_axis uses taxonomy-assisted root-cause localization; baselines use naive signal inference.}",
+        r"\caption{MCP Benchmark Results. dual\_axis localizes from real server-emitted signals (denial origin, approval baseline, overbroad-scope flag); baselines use naive keyword inference from response text.}",
         r"\label{tab:benchmark}",
         r"\end{table}",
     ]

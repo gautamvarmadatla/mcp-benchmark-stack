@@ -7,12 +7,20 @@ auth:
   required_scopes:
     get_secret: ["read:secrets"]
     admin_action: ["admin"]
+    read_metric: ["read:secrets"]   # misconfigured: a metric read only needs read:metrics
   required_roles:
     admin_action: ["admin_user"]
   blacklisted_principals:
     - banned_user
+  # Tools whose required scope is broader than their function warrants. Denials on these are
+  # rooted in the tool's own (creation-time) config, not the auth infra.
+  overbroad_tool_scopes:
+    - read_metric
 policy:
   log_auth_decisions: true
   deny_missing_token: true
   deny_wrong_scope: true
   deny_blacklisted_principals: true
+signals:
+  # Every AUTHZ_DENIED is structured JSON: {required_scope, granted_scope, tool_scope_overbroad}.
+  authz_denial_fields: "required_scope, granted_scope, tool_scope_overbroad"

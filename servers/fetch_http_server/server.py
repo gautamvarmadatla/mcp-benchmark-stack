@@ -29,7 +29,9 @@ def _check_host(url: str) -> str:
     parsed = urlparse(url)
     host = parsed.hostname or ""
     if host not in ALLOWED_HOSTS:
-        raise ValueError(f"POLICY_VIOLATION: host '{host}' not in egress allowlist {ALLOWED_HOSTS}")
+        # origin=egress marks this as a runtime egress decision (invocation/execution),
+        # distinct from a creation-time scope-config denial.
+        raise ValueError(f"POLICY_VIOLATION: host '{host}' not in egress allowlist {ALLOWED_HOSTS} (origin=egress)")
     return host
 
 

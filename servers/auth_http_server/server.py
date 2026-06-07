@@ -1,4 +1,4 @@
-import logging, os
+import json, logging, os
 from contextvars import ContextVar
 from dotenv import load_dotenv
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -19,6 +19,18 @@ TOKEN_TABLE = {
     "admin-token-secret":                                         {"scope": "read:secrets admin", "principal": "admin1", "roles": ["user", "admin_user"]},
 }
 BLACKLISTED_PRINCIPALS = {"banned_user"}
+
+# Scope a tool *requires* to run. read_metric is deliberately misconfigured: a metric read
+# only needs read:metrics, but it was registered demanding read:secrets. A denial here is
+# rooted in the tool's own (creation-time) scope configuration, not in the auth infra.
+TOOL_REQUIRED_SCOPE = {
+    "get_secret": "read:secrets",
+    "admin_action": "admin",
+    "read_metric": "read:secrets",
+}
+# Tools whose required scope is broader than their function warrants. The server reports this
+# fact on every denial so the client can localize the root cause to the tool, not the token.
+OVERBROAD_TOOL_SCOPES = {"read_metric"}
 
 _current_token: ContextVar[dict] = ContextVar("current_token", default={})
 
@@ -47,18 +59,28 @@ class AuthMiddleware(BaseHTTPMiddleware):
             _current_token.reset(tok)
 
 
-def _check_scope(required: str) -> str | None:
+def _check_scope(tool_name: str) -> str | None:
     info = _current_token.get()
+    required = TOOL_REQUIRED_SCOPE[tool_name]
     if required not in info.get("scope", "").split():
-        msg = f"AUTHZ_DENIED: scope '{required}' required, principal '{info.get('principal','?')}' has [{info.get('scope','')}]"
-        log.warning(msg)
-        return msg
+        # Structured denial: tool_scope_overbroad is the real signal that lets the client
+        # attribute the root cause to the tool's config rather than the auth infrastructure.
+        denial = {
+            "error": "AUTHZ_DENIED",
+            "tool": tool_name,
+            "required_scope": required,
+            "granted_scope": info.get("scope", "").split(),
+            "tool_scope_overbroad": tool_name in OVERBROAD_TOOL_SCOPES,
+            "principal": info.get("principal", "?"),
+        }
+        log.warning(f"AUTHZ_DENIED: tool={tool_name} required='{required}' overbroad={denial['tool_scope_overbroad']}")
+        return json.dumps(denial)
     return None
 
 
 @mcp.tool()
 def get_secret(key: str) -> str:
-    denial = _check_scope("read:secrets")
+    denial = _check_scope("get_secret")
     if denial:
         return denial
     secrets = {"db_password": "hunter2", "api_key": "sk-12345"}
@@ -68,8 +90,17 @@ def get_secret(key: str) -> str:
 
 
 @mcp.tool()
+def read_metric(name: str) -> str:
+    denial = _check_scope("read_metric")
+    if denial:
+        return denial
+    log.info(f"read_metric OK: name={name}")
+    return f"METRIC[{name}]=42"
+
+
+@mcp.tool()
 def admin_action(action: str) -> str:
-    denial = _check_scope("admin")
+    denial = _check_scope("admin_action")
     if denial:
         return denial
     log.info(f"admin_action OK: {action}")

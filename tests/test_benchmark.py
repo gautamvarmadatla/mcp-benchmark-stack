@@ -265,19 +265,43 @@ def test_infer_phase_authz_denied():
 
 def test_infer_component_dual_overbroad_scope():
     from client.benchmark_client import _infer_component_dual
-    assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", "overbroad_scope_manifests_as_authz_denial") == "tools"
+    # Earned from the server's overbroad-scope signal, not a scenario annotation.
+    assert _infer_component_dual("AUTHZ_DENIED ...", {"tool_scope_overbroad": True}) == "tools"
 
 def test_infer_component_dual_fallback():
     from client.benchmark_client import _infer_component_dual
-    assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", "unauthorized_principal") == "auth_infra"
+    # No overbroad signal -> falls back to naive: AUTHZ_DENIED maps to auth_infra.
+    assert _infer_component_dual("AUTHZ_DENIED: scope mismatch", {}) == "auth_infra"
 
-def test_infer_phase_dual_at_runtime():
+def test_infer_phase_dual_drift_after_approval():
     from client.benchmark_client import _infer_phase_dual
-    assert _infer_phase_dual("HASH_MISMATCH: expected=X actual=Y", "integrity_check", "integrity_drift_detected_at_runtime") == "update_maintenance"
+    # Approval baseline exists and the live hash diverged -> update_maintenance.
+    assert _infer_phase_dual("HASH_MISMATCH ...", "integrity_check",
+                             {"integrity_approved": True, "integrity_mismatch": True}) == "update_maintenance"
 
-def test_infer_phase_dual_fallback():
+def test_infer_phase_dual_admission_fallback():
     from client.benchmark_client import _infer_phase_dual
-    assert _infer_phase_dual("HASH_MISMATCH: expected=X actual=Y", "integrity_check", "unapproved_tool_at_admission") == "creation_registration"
+    # No prior approval -> admission check -> naive HASH_MISMATCH maps to creation_registration.
+    assert _infer_phase_dual("HASH_MISMATCH ...", "integrity_check",
+                             {"integrity_approved": False, "integrity_mismatch": True}) == "creation_registration"
+
+def test_infer_phase_dual_scope_config_origin():
+    from client.benchmark_client import _infer_phase_dual
+    assert _infer_phase_dual("POLICY_VIOLATION ... (origin=scope_config)", "read_file",
+                             {"origin": "scope_config"}) == "creation_registration"
+
+def test_infer_phase_dual_egress_origin():
+    from client.benchmark_client import _infer_phase_dual
+    assert _infer_phase_dual("POLICY_VIOLATION ... (origin=egress)", "fetch_url",
+                             {"origin": "egress"}) == "invocation_execution"
+
+def test_parse_signals_origins_and_overbroad():
+    from client.benchmark_client import _parse_signals
+    assert _parse_signals("POLICY_VIOLATION ... (origin=scope_config)")["origin"] == "scope_config"
+    assert _parse_signals("POLICY_VIOLATION ... (origin=egress)")["origin"] == "egress"
+    assert _parse_signals('{"error": "AUTHZ_DENIED", "tool_scope_overbroad": true}')["tool_scope_overbroad"] is True
+    assert _parse_signals('{"error": "AUTHZ_DENIED", "tool_scope_overbroad": false}')["tool_scope_overbroad"] is False
+    assert _parse_signals("plain AUTHZ_DENIED text") == {}
 
 # --- Golden tests: S11 and S12 create exactly the right divergence ---
 

@@ -8,3 +8,6 @@ policy:
   deny_unlisted_hosts: true
   tls_validation: strict
   log_target: stderr
+signals:
+  # Egress denials are tagged origin=egress (a runtime invocation/execution decision).
+  denial_origin: egress

@@ -1,6 +1,9 @@
 # MCP Benchmark Scenarios
 # 10 violating + 2 benign (12 total)
 # Each has: id, description, transport, violating, component, lifecycle_phase, evidence_kind, failure_mode
+# NOTE: failure_mode is documentation only. dual_axis localization is NOT derived from it —
+# it is inferred from real signals the servers emit at runtime (denial origin, integrity
+# approval baseline, overbroad-scope flag). See README "How localization is earned".
 # Plus transport-specific fields: command/args/env for stdio, url/headers for http
 # Components: tools, auth_infra, server
 # Lifecycle phases: creation_registration, discovery, invocation_execution, update_maintenance
@@ -114,7 +117,10 @@ scenarios:
     evidence_kind: hash_mismatch
     command: python
     args: ["servers/file_stdio_server/server.py"]
-    env: {}
+    # Tool was previously approved with this baseline; the live hash now differs ->
+    # the server reports approved=true, match=false (genuine post-approval drift).
+    env:
+      REGISTERED_TOOL_HASH: "APPROVED_HASH_CCCC3333"
     tool: read_file
     tool_args:
       path: "hello.txt"
@@ -150,7 +156,10 @@ scenarios:
     evidence_kind: hash_mismatch
     command: python
     args: ["servers/file_stdio_server/server.py"]
-    env: {}
+    # Same earned signal as S7: an approval baseline exists and the live hash diverged
+    # from it at runtime -> approved=true, match=false -> update_maintenance.
+    env:
+      REGISTERED_TOOL_HASH: "RUNTIME_DRIFT_HASH_9999"
     tool: read_file
     tool_args:
       path: "hello.txt"
@@ -169,9 +178,13 @@ scenarios:
     url: "http://127.0.0.1:8002/mcp"
     headers:
       Authorization: "Bearer scope-limited-token-xyz"
-    tool: get_secret
+    # read_metric is registered demanding read:secrets though it only needs read:metrics.
+    # The token HAS read:metrics, so the denial's root cause is the tool's own overbroad
+    # scope config (tools / creation_registration), not the auth infra. The server reports
+    # tool_scope_overbroad=true so the localizer can infer this without any annotation.
+    tool: read_metric
     tool_args:
-      key: "api_key"
+      name: "request_latency"
 
   # --- BENIGN ---
 
