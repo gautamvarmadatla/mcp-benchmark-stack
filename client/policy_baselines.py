@@ -6,32 +6,11 @@ SCOPE_POLICY = {
     "deny_unlisted_hosts": True,
 }
 
-IDENTITY_POLICY = {
-    "tls_validation": "strict",
-    "pin_certs": False,
-    "require_valid_cert": True,
-    "tool_hash_check": True,
-    "known_tool_hashes": {},
-}
-
 METADATA_POLICY = {
     "deny_markup_in_descriptions": True,
     "deny_unknown_tool_ids": False,
     "description_max_length": 500,
     "disallowed_patterns": ["<script", "javascript:", "eval(", "exec("],
-}
-
-AUTHZ_POLICY = {
-    "required_scopes": {
-        "get_secret": ["read:secrets"],
-        "admin_action": ["admin"],
-    },
-    "required_roles": {
-        "admin_action": ["admin_user"],
-    },
-    "blacklisted_principals": ["banned_user"],
-    "require_trace_id": True,
-    "require_alert_on_deny": True,
 }
 
 def check_metadata(tool_description: str) -> tuple[bool, str]:

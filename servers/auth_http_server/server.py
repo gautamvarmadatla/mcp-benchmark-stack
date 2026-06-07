@@ -13,16 +13,14 @@ log = logging.getLogger("auth_http_server")
 PORT = int(os.getenv("AUTH_SERVER_PORT", "8002"))
 
 TOKEN_TABLE = {
-    os.getenv("VALID_API_TOKEN", "valid-token-abc123"):           {"scope": "read:secrets", "principal": "user1",       "roles": ["user"]},
-    os.getenv("INVALID_SCOPE_TOKEN", "scope-limited-token-xyz"):  {"scope": "read:metrics", "principal": "user2",       "roles": ["user"]},
-    os.getenv("UNAUTHORIZED_TOKEN", "unauthorized-token-000"):    {"scope": "read:secrets", "principal": "banned_user", "roles": ["user"]},
-    "admin-token-secret":                                         {"scope": "read:secrets admin", "principal": "admin1", "roles": ["user", "admin_user"]},
+    os.getenv("VALID_API_TOKEN", "valid-token-abc123"):           {"scope": "read:secrets", "principal": "user1"},
+    os.getenv("INVALID_SCOPE_TOKEN", "scope-limited-token-xyz"):  {"scope": "read:metrics", "principal": "user2"},
+    os.getenv("UNAUTHORIZED_TOKEN", "unauthorized-token-000"):    {"scope": "read:secrets", "principal": "banned_user"},
 }
 BLACKLISTED_PRINCIPALS = {"banned_user"}
 
 TOOL_REQUIRED_SCOPE = {
     "get_secret": "read:secrets",
-    "admin_action": "admin",
     "read_metric": "read:secrets",
 }
 OVERBROAD_TOOL_SCOPES = {"read_metric"}
@@ -89,15 +87,6 @@ def read_metric(name: str) -> str:
         return denial
     log.info(f"read_metric OK: name={name}")
     return f"METRIC[{name}]=42"
-
-
-@mcp.tool()
-def admin_action(action: str) -> str:
-    denial = _check_scope("admin_action")
-    if denial:
-        return denial
-    log.info(f"admin_action OK: {action}")
-    return f"ADMIN_ACTION_EXECUTED: {action}"
 
 
 if __name__ == "__main__":

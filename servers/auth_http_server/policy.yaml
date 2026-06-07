@@ -6,10 +6,7 @@ auth:
   oauth_style: oauth2.1
   required_scopes:
     get_secret: ["read:secrets"]
-    admin_action: ["admin"]
     read_metric: ["read:secrets"]
-  required_roles:
-    admin_action: ["admin_user"]
   blacklisted_principals:
     - banned_user
   overbroad_tool_scopes:

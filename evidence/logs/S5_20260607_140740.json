@@ -12,7 +12,7 @@
   "baseline_component": "auth_infra",
   "baseline_phase": "invocation_execution",
   "produced_evidence_kind": "policy_violation",
-  "produced_evidence_path": "evidence\\traces\\S5_20260607_140017_policy_violation.json",
+  "produced_evidence_path": "evidence\\traces\\S5_20260607_140740_policy_violation.json",
   "evidence_found": true,
   "tool_called": "get_secret",
   "tool_args": {
@@ -20,5 +20,5 @@
   },
   "tool_response": "{\"error\": \"AUTHZ_DENIED\", \"tool\": \"get_secret\", \"required_scope\": \"read:secrets\", \"granted_scope\": [\"read:metrics\"], \"tool_scope_overbroad\": false, \"principal\": \"user2\"}",
   "error": "",
-  "timestamp": "2026-06-07T14:00:17.477401+00:00"
+  "timestamp": "2026-06-07T14:07:40.850492+00:00"
 }
